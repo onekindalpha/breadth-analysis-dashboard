@@ -726,16 +726,29 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
         xref="x", yref="y2",
         line=dict(color=lb_color, width=2, dash="dash"))
 
-    # ── Pine: 맨 오른쪽 끝 판정 라벨
-    _last_dt  = pf["dt"].iloc[-1]
-    _last_ad  = float(ad_vals.iloc[-1])
+    # ── Pine: 판정 라벨 — bear=H_b 위치, bull=L_b 위치, 중립=우측끝
+    if hlab["bear_div"]:
+        _ann_dt  = hlab["hb_dt"]
+        _ann_ad  = hlab["hb_ad"]
+        _ann_ay  = -40   # 위쪽에 표시
+        _ann_ax  = 0
+    elif hlab["bull_div"]:
+        _ann_dt  = hlab["lb_dt"]
+        _ann_ad  = hlab["lb_ad"]
+        _ann_ay  = 40    # 아래쪽에 표시
+        _ann_ax  = 0
+    else:
+        _ann_dt  = pf["dt"].iloc[-1]
+        _ann_ad  = float(ad_vals.iloc[-1])
+        _ann_ay  = -30
+        _ann_ax  = 0
     fig.add_annotation(
-        x=_last_dt, y=_last_ad, xref="x", yref="y2",
+        x=_ann_dt, y=_ann_ad, xref="x", yref="y2",
         text=f"{div_text}",
-        showarrow=False, xanchor="left",
+        showarrow=True, arrowhead=0, ax=_ann_ax, ay=_ann_ay,
+        xanchor="center",
         font=dict(color="white", size=11),
         bgcolor=div_color, bordercolor=div_color, borderwidth=1,
-        xshift=8,
     )
 
     # A/D 데이터 lookup: ISO 날짜문자열 → float (JS 자석선에 사용)
@@ -763,6 +776,15 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
             spikethickness=1, spikecolor="rgba(200,200,200,0.7)", spikedash="solid",
             tickformat="%Y/%m/%d", tickangle=-45, tickfont=dict(size=11),
             showline=True, mirror=True,
+            rangebreaks=[
+                dict(bounds=["sat", "mon"]),  # 주말 제거
+                # 코스닥 index CSV에 없는 평일(공휴일 등) 제거
+                *([dict(values=list(
+                    pd.bdate_range(pf_idx3["dt"].min(), pf_idx3["dt"].max())
+                    .difference(pf_idx3["dt"])
+                    .strftime("%Y-%m-%d")
+                ))] if _has_index and not pf_idx3.empty else []),
+            ],
         ),
         yaxis=dict(
             title="지수", domain=[0.50, 1.0], range=y1_range,
