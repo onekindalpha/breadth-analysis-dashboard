@@ -337,7 +337,7 @@ def build_breadth(auth_key, start, end, market, base_value=50000.0):
 # ──────────────────────────────────────────────────────────────
 # GitHub raw CSV 로드
 # ──────────────────────────────────────────────────────────────
-@st.cache_data(show_spinner=False, ttl=1800)
+@st.cache_data(show_spinner=False, ttl=300)
 def load_from_github(market: str) -> pd.DataFrame:
     """GitHub에 push된 CSV(breadth + index 머지)를 읽어 반환"""
     import requests as _req
@@ -361,7 +361,7 @@ def load_from_github(market: str) -> pd.DataFrame:
     df = df.sort_values("date").reset_index(drop=True)
     return df
 
-@st.cache_data(show_spinner=False, ttl=1800)
+@st.cache_data(show_spinner=False, ttl=300)
 def load_nhnl_daily_from_github(market: str):
     """GitHub에 push된 NH-NL 일별 CSV를 읽어 반환 (없으면 None)"""
     import requests as _req
@@ -379,7 +379,7 @@ def load_nhnl_daily_from_github(market: str):
     except Exception:
         return None
 
-@st.cache_data(show_spinner=False, ttl=1800)
+@st.cache_data(show_spinner=False, ttl=300)
 def load_nhnl_from_github(market: str):
     """GitHub에 push된 NH-NL CSV를 읽어 반환 (없으면 None)"""
     import requests as _req
@@ -400,7 +400,7 @@ def load_nhnl_from_github(market: str):
 # ──────────────────────────────────────────────────────────────
 # 지수 OHLC
 # ──────────────────────────────────────────────────────────────
-@st.cache_data(show_spinner=False, ttl=3600)
+@st.cache_data(show_spinner=False, ttl=300)
 def fetch_index_ohlc(market, start, end):
     if not FDR_OK:
         raise RuntimeError("finance-datareader 미설치")
@@ -875,6 +875,9 @@ def main():
         if mode == "☁️ GitHub (빠름)":
             try:
                 with st.spinner("GitHub에서 CSV 읽는 중…"):
+                    load_from_github.clear()
+                    load_nhnl_from_github.clear()
+                    load_nhnl_daily_from_github.clear()
                     df = load_from_github(market)
                     nhnl_df = load_nhnl_from_github(market)
                     nhnl_daily_df = load_nhnl_daily_from_github(market)
