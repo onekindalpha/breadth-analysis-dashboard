@@ -778,12 +778,6 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
             showline=True, mirror=True,
             rangebreaks=[
                 dict(bounds=["sat", "mon"]),  # 주말 제거
-                # 코스닥 index CSV에 없는 평일(공휴일 등) 제거
-                *([dict(values=list(
-                    pd.bdate_range(pf_idx3["dt"].min(), pf_idx3["dt"].max())
-                    .difference(pf_idx3["dt"])
-                    .strftime("%Y-%m-%d")
-                ))] if _has_index and not pf_idx3.empty else []),
             ],
         ),
         yaxis=dict(
@@ -1126,29 +1120,54 @@ def main():
             st.error(f"차트 렌더링 실패: {e}")
 
         # Pine 테이블 재현: 차트 아래
+        # bear_div → H_a/H_b 표만, bull_div → L_a/L_b 표만, 중립 → 둘 다
         st.markdown("---")
-        _ad_hb_flag = "  ⚠" if _bear else "  ✓"
-        _ad_lb_flag = "  ⚠" if _bull else "  ✓"
-        col_h, col_l = st.columns(2)
-        with col_h:
+        if _bear:
+            # 부정적 불일치: 고점 비교만 표시
             st.markdown(f"""
 | 항목 | 값 |
 |---|---|
 | H_a 예전 고점 ({_ha_date}) | {hlab['ha_val']:,.2f} |
 | A/D @ H_a | {hlab['ha_ad']:,.0f} |
 | H_b 최근 고점 ({_hb_date}) | {hlab['hb_val']:,.2f} |
-| A/D @ H_b | {hlab['hb_ad']:,.0f}{_ad_hb_flag} |
+| A/D @ H_b | {hlab['hb_ad']:,.0f}  ⚠ |
 | A/D 괴리 % | {_bdp:.2f}% |
 | 판정 | {_status} |
 """)
-        with col_l:
+        elif _bull:
+            # 긍정적 불일치: 저점 비교만 표시
             st.markdown(f"""
 | 항목 | 값 |
 |---|---|
 | L_a 예전 저점 ({_la_date}) | {hlab['la_val']:,.2f} |
 | A/D @ L_a | {hlab['la_ad']:,.0f} |
 | L_b 최근 저점 ({_lb_date}) | {hlab['lb_val']:,.2f} |
-| A/D @ L_b | {hlab['lb_ad']:,.0f}{_ad_lb_flag} |
+| A/D @ L_b | {hlab['lb_ad']:,.0f}  △ |
+| A/D 괴리 % | {_bup:.2f}% |
+| 판정 | {_status} |
+""")
+        else:
+            # 중립: 둘 다 표시
+            col_h, col_l = st.columns(2)
+            with col_h:
+                st.markdown(f"""
+| 항목 | 값 |
+|---|---|
+| H_a 예전 고점 ({_ha_date}) | {hlab['ha_val']:,.2f} |
+| A/D @ H_a | {hlab['ha_ad']:,.0f} |
+| H_b 최근 고점 ({_hb_date}) | {hlab['hb_val']:,.2f} |
+| A/D @ H_b | {hlab['hb_ad']:,.0f} |
+| A/D 괴리 % | {_bdp:.2f}% |
+| 판정 | {_status} |
+""")
+            with col_l:
+                st.markdown(f"""
+| 항목 | 값 |
+|---|---|
+| L_a 예전 저점 ({_la_date}) | {hlab['la_val']:,.2f} |
+| A/D @ L_a | {hlab['la_ad']:,.0f} |
+| L_b 최근 저점 ({_lb_date}) | {hlab['lb_val']:,.2f} |
+| A/D @ L_b | {hlab['lb_ad']:,.0f} |
 | A/D 괴리 % | {_bup:.2f}% |
 | 판정 | {_status} |
 """)
