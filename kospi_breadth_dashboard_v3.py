@@ -727,28 +727,15 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
         line=dict(color=lb_color, width=2, dash="dash"))
 
     # ── Pine: 판정 라벨 — bear=H_b 위치, bull=L_b 위치, 중립=우측끝
-    if hlab["bear_div"]:
-        _ann_dt  = hlab["hb_dt"]
-        _ann_ad  = hlab["hb_ad"]
-        _ann_ay  = -40   # 위쪽에 표시
-        _ann_ax  = 0
-    elif hlab["bull_div"]:
-        _ann_dt  = hlab["lb_dt"]
-        _ann_ad  = hlab["lb_ad"]
-        _ann_ay  = 40    # 아래쪽에 표시
-        _ann_ax  = 0
-    else:
-        _ann_dt  = pf["dt"].iloc[-1]
-        _ann_ad  = float(ad_vals.iloc[-1])
-        _ann_ay  = -30
-        _ann_ax  = 0
+    _last_dt = pf["dt"].iloc[-1]
+    _last_ad = float(ad_vals.iloc[-1])
     fig.add_annotation(
-        x=_ann_dt, y=_ann_ad, xref="x", yref="y2",
+        x=_last_dt, y=_last_ad, xref="x", yref="y2",
         text=f"{div_text}",
-        showarrow=True, arrowhead=0, ax=_ann_ax, ay=_ann_ay,
-        xanchor="center",
+        showarrow=False, xanchor="left",
         font=dict(color="white", size=11),
         bgcolor=div_color, bordercolor=div_color, borderwidth=1,
+        xshift=8,
     )
 
     # A/D 데이터 lookup: ISO 날짜문자열 → float (JS 자석선에 사용)
