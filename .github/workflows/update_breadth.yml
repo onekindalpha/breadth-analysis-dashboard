@@ -2,7 +2,7 @@ name: Update KR Breadth Data
 
 on:
   schedule:
-    - cron: "0 7 * * 1-5"   # 평일 오후 4시 KST (UTC+9)
+    - cron: "30 9 * * 1-5"   # 평일 오후 6시 30분 KST (UTC+9)
   workflow_dispatch:          # 수동 실행 가능
     inputs:
       init_prices:
