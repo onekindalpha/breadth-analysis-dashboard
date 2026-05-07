@@ -2,11 +2,11 @@ name: Update KR Breadth Data
 
 on:
   schedule:
-    - cron: "0 1 * * 1-5"   # 평일 오전 10시 KST
-  workflow_dispatch:
+    - cron: "0 7 * * 1-5"   # 평일 오후 4시 KST (UTC+9)
+  workflow_dispatch:          # 수동 실행 가능
     inputs:
       init_prices:
-        description: "과거 prices/NH-NL 초기화"
+        description: "과거 prices 초기화 (최초 1회, 시간 오래 걸림)"
         required: false
         default: "false"
         type: choice
@@ -24,8 +24,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -42,27 +40,19 @@ jobs:
           KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
         run: |
           echo "=== prices 초기화 모드 ==="
-          python update_breadth.py --init-prices --days 1200 || true
+          python update_breadth.py --init-prices --days 420 || true
 
       - name: Run update script (daily mode)
         if: ${{ github.event.inputs.init_prices != 'true' }}
         env:
           KRX_AUTH_KEY: ${{ secrets.KRX_AUTH_KEY }}
-        run: |
-          echo "=== daily update mode ==="
-          python update_breadth.py || true
+        run: python update_breadth.py || true
 
       - name: Commit and push updated CSVs
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
+          git pull --rebase origin main
           git add data/
-
-          if git diff --cached --quiet; then
-            echo "No data changes to commit"
-            exit 0
-          fi
-
-          git commit -m "chore: update breadth data $(date +%Y%m%d)"
+          git diff --cached --quiet || git commit -m "chore: update breadth data $(date +%Y%m%d)"
           git push
