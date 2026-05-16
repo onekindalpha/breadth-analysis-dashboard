@@ -796,7 +796,12 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     st.title("📊 국장 A/D Line 브레드스 대시보드")
-    st.caption("KRX 상승·하락 종목 수 기반 / 스탠 와인스태인 브레드스 분석")
+    st.markdown(
+        "KRX 상승·하락 종목 수 기반 / 스탠 와인스태인 브레드스 분석 &nbsp;|&nbsp; "
+        "<a href='https://github.com/onekindalpha' target='_blank' "
+        "style='color:#58a6ff; text-decoration:none; font-weight:500;'>@onekindalpha</a>",
+        unsafe_allow_html=True,
+    )
 
     # ── 사이드바 ──────────────────────────────────────
     with st.sidebar:
@@ -850,6 +855,20 @@ def main():
                     st.rerun()
         else:
             st.caption("저장된 캐시 없음")
+
+        st.divider()
+        st.markdown(
+            """
+            <div style='text-align:center; padding: 6px 0 2px 0;'>
+                <a href='https://github.com/onekindalpha' target='_blank'
+                   style='color:#58a6ff; text-decoration:none; font-size:13px; font-weight:500;'>
+                    @onekindalpha
+                </a><br>
+                <span style='color:#555; font-size:10px;'>KOSPI · KOSDAQ Breadth Dashboard</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     # ── 데이터 불러오기 ──────────────────────────────
     if not fetch_btn and "df_merged" not in st.session_state:
@@ -1824,6 +1843,22 @@ def main():
                     display_df = display_df.sort_values("날짜", ascending=False).reset_index(drop=True)
                     st.caption("📅 주간 데이터 (일별 데이터 없음)")
                     st.dataframe(display_df, use_container_width=True, height=300)
+
+    _render_footer()
+
+def _render_footer():
+    st.divider()
+    st.markdown(
+        """
+        <div style='text-align:center; padding:10px 0 4px 0; color:#555; font-size:12px;'>
+            Built by
+            <a href='https://github.com/onekindalpha' target='_blank'
+               style='color:#58a6ff; text-decoration:none; font-weight:600;'>@onekindalpha</a>
+            &nbsp;·&nbsp; 스탠 와인스태인 브레드스 분석 대시보드
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 if __name__ == "__main__":
     main()
