@@ -965,7 +965,8 @@ def main():
     if "active_tab" not in st.session_state:
         st.session_state["active_tab"] = TAB_LABELS[0]
 
-    _default_idx = TAB_LABELS.index(st.session_state.get("active_tab", TAB_LABELS[0]))
+    _saved_tab = st.session_state.get("active_tab", TAB_LABELS[0])
+    _default_idx = TAB_LABELS.index(_saved_tab) if _saved_tab in TAB_LABELS else 0
     if hasattr(st, "segmented_control"):
         active_tab = st.segmented_control(
             "분석 탭",
@@ -982,6 +983,9 @@ def main():
             horizontal=True,
             key="active_tab_selector",
         )
+    # segmented_control이 None을 반환하는 경우 방어
+    if active_tab is None or active_tab not in TAB_LABELS:
+        active_tab = TAB_LABELS[0]
     st.session_state["active_tab"] = active_tab
 
     # ══════════════════════════════════════════════
