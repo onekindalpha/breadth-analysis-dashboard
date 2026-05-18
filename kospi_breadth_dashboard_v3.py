@@ -95,7 +95,7 @@ STATUS_MAP = {
     "BULLISH_CONFIRMATION":         ("✅ Bullish Confirmation",           "가격·A/D선 모두 High 근접 (동행)",                   "#2e7d32"),
     "BULLISH_DIVERGENCE":           ("🔴⚠️ Severe A/D Divergence",   "가격 High인데 A/D선이 크게 뒤처짐",                  "#c62828"),
     "BULLISH_DIVERGENCE_CANDIDATE": ("🟠⚠️ Early A/D Warning",       "Price is recovering faster than the A/D line",                    "#ef6c00"),
-    "RECOVERY_IN_PROGRESS":         ("🟡Recovery in Progress",         "가격 High 재공략 중, 브레드스 미확인",                "#f9a825"),
+    "RECOVERY_IN_PROGRESS":         ("🟡Recovery in Progress",         "Price retesting high without breadth confirmation",                "#f9a825"),
     "DOWNSIDE_DIVERGENCE_CANDIDATE":("🟢Downside Divergence",      "Price is near lows while A/D line does not confirm lows",                 "#00838f"),
     "NORMAL_WEAKNESS":              ("⚫ Broad Weakness",           "Price and A/D line are both near recent lows",                          "#455a64"),
     "NEUTRAL":                      ("⬜ Neutral",                 "No clear signal",                                   "#757575"),
@@ -1366,7 +1366,7 @@ def main():
             if _daily_nhnl > 0 and (_nhnl_daily_local is None or len(_nhnl_daily_local) < 2 or _daily_nhnl >= int(_nhnl_daily_local.sort_values("date").iloc[-2]["nhnl"])):
                 _daily_verdict = "🟢 양호"
             elif _daily_nhnl > 0:
-                _daily_verdict = "⚠️ 브레드스↓"
+                _daily_verdict = "⚠️ Breadth Weakening"
             elif _daily_nhnl < 0:
                 _daily_verdict = "🔴 약세"
             else:
@@ -1392,17 +1392,17 @@ def main():
             _strong_bear = last_nhnl < -_STRONG  # Pine: nhnl < -200
             if not pd.isna(lma):
                 if _idx_up and lma > 0 and _strong_bull and _nhnl_up:
-                    nhnl_verdict, trend_color = "🟢 강한상승",  "#2e7d32"   # Pine: 강한 상승 브레드스
+                    nhnl_verdict, trend_color = "🟢 Strong Uptrend",  "#2e7d32"   # Pine: strong bullish breadth
                 elif _idx_up and lma > 0 and _nhnl_up:
                     nhnl_verdict, trend_color = "🟢 양호",      "#43a047"   # Pine: 양호
                 elif _idx_up and lma > 0 and not _nhnl_up:
-                    nhnl_verdict, trend_color = "⚠️ 브레드스↓", "#ef6c00"   # Index↑이지만 NH-NL 약화
+                    nhnl_verdict, trend_color = "⚠️ Breadth Weakening", "#ef6c00"   # Index↑이지만 NH-NL 약화
                 elif _idx_up and lma > 0:
                     nhnl_verdict, trend_color = "🟡 둔화중",    "#f9a825"
                 elif not _idx_up and lma > 0 and _nhnl_up:
                     nhnl_verdict, trend_color = "🔵 선행회복",  "#1e88e5"   # NH-NL 먼저 회복
                 elif _strong_bear and lma < 0 and lma < pma:
-                    nhnl_verdict, trend_color = "🔴 강한하락",  "#b71c1c"   # Pine: 강한 하락 브레드스
+                    nhnl_verdict, trend_color = "🔴 Strong Downtrend",  "#b71c1c"   # Pine: strong bearish breadth
                 elif lma < 0 and lma < pma:
                     nhnl_verdict, trend_color = "🔴 약세",      "#c62828"   # Pine: 주의
                 elif lma < 0:
@@ -1412,12 +1412,12 @@ def main():
 
             # 판정 기준 안내 (Pine script ±200 임계값 기준)
             _verdict_desc = {
-                "🟢 강한상승":  "NH-NL>200, MA+, Index↑ (강한 상승 브레드스)",
+                "🟢 Strong Uptrend":  "NH-NL > 200, MA+, Index rising (strong breadth)",
                 "🟢 양호":      "NH-NL+, MA+, Index↑ (양호)",
-                "⚠️ 브레드스↓": "Index↑이나 NH-NL 전주 대비 감소 (약화 경고)",
+                "⚠️ Breadth Weakening": "Index rising, but NH-NL decreased WoW (weakening warning)",
                 "🟡 둔화중":    "Index↑이나 MA 상승세 약화",
                 "🔵 선행회복":  "NH-NL 회복 중, Index 아직 하락",
-                "🔴 강한하락":  "NH-NL<-200, MA-, Index↓ (강한 하락 브레드스)",
+                "🔴 Strong Downtrend":  "NH-NL < -200, MA-, Index falling (weak breadth)",
                 "🔴 약세":      "MA-, MA 하락 중 (주의)",
                 "🟠 회복중":    "MA- 이나 하락세 둔화",
                 "🟡 혼조":      "MA 방향 불명확 (혼조)",
