@@ -446,7 +446,7 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
 # 메인 앱
 # ──────────────────────────────────────────────────────────────
 def main() -> None:
-    st.title("📊 국장 A/D Line 브레드스 대시보드")
+    st.title("KOSPI Breadth Analysis Dashboard")
     st.caption("A/D Line · Breadth Thrust · Price-Breadth Divergence")
 
     # 초기 부팅 확인

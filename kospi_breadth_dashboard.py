@@ -380,7 +380,7 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict,
 def main():
     st.set_page_config(page_title="KOSPI Breadth Analysis Dashboard",
                        page_icon="📊", layout="wide")
-    st.title("📊 국장 A/D Line 브레드스 대시보드")
+    st.title("KOSPI Breadth Analysis Dashboard")
     st.caption("A/D Line · Breadth Thrust · Price-Breadth Divergence")
 
     # ── 사이드바 ──────────────────────────────────────

@@ -795,7 +795,7 @@ def main():
     .hoverlayer .hovertext path { stroke: #555 !important; }
     </style>
     """, unsafe_allow_html=True)
-    st.title("📊 국장 A/D Line 브레드스 대시보드")
+    st.title("KOSPI Breadth Analysis Dashboard")
     st.caption("A/D Line · Breadth Thrust · Price-Breadth Divergence")
 
     # ── 사이드바 ──────────────────────────────────────
