@@ -545,14 +545,14 @@ def main():
 
     with st.sidebar:
         st.header("⚙️ Settings")
-        market   = st.selectbox("마켓", ["NYSE", "NASDAQ"])
+        market   = st.selectbox("Market", ["NYSE", "NASDAQ"])
         today    = datetime.today()
         start_dt = st.date_input("시작일", value=today - timedelta(days=730))
         end_dt   = st.date_input("종료일", value=today)
-        fetch_btn = st.button("🔄 데이터 불러오기", type="primary", use_container_width=True)
+        fetch_btn = st.button("🔄 Load Data", type="primary", use_container_width=True)
         st.divider()
         st.subheader("Analysis Parameters")
-        lookback     = st.slider("Lookback (일)",      20, 252, 126)
+        lookback     = st.slider("Lookback (days)",      20, 252, 126)
         chart_months = st.slider("Chart Display Period (months)", 1,  24,   6)
         high_bars    = st.slider("High 탐색 H_b (일)",  10, 500, 60)
         low_bars     = st.slider("저점 탐색 L_b (일)",  10, 500, 130)
@@ -563,7 +563,7 @@ def main():
             gap_danger = st.number_input("Severe Divergence Threshold (%)",       value=2.5, step=0.1)
 
     if not fetch_btn and "us_df_merged" not in st.session_state:
-        st.info("👈 사이드바에서 마켓 선택 후 **데이터 불러오기** 버튼을 눌러주세요.")
+        st.info("👈 사이드바에서 Market 선택 후 **Load Data** 버튼을 눌러주세요.")
         return
 
     if fetch_btn:
@@ -590,7 +590,7 @@ def main():
 
     if st.session_state.get("us_df_market") != market:
         st.session_state.pop("us_df_merged", None)
-        st.info("마켓이 변경됐습니다. 데이터 불러오기를 다시 눌러주세요."); return
+        st.info("Market이 변경됐습니다. Load Data를 다시 눌러주세요."); return
 
     df      = st.session_state["us_df_merged"]
     nhnl_df = st.session_state.get("us_nhnl")
@@ -670,10 +670,10 @@ def main():
                 st.warning(
                     f"NH-NL Data collection failed: {err}\n\n"
                     "Yahoo Finance가 해당 심볼을 지원하지 않을 수 있습니다. "
-                    "**데이터 불러오기** 버튼을 다시 눌러보세요."
+                    "**Load Data** 버튼을 다시 눌러보세요."
                 )
             else:
-                st.info("데이터 불러오기 버튼을 눌러주세요.")
+                st.info("Load Data 버튼을 눌러주세요.")
         elif nhnl_df.empty:
             st.warning("NH-NL 데이터가 비어 있습니다.")
         if nhnl_df is not None and not nhnl_df.empty:

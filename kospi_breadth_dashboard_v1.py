@@ -29,7 +29,7 @@ matplotlib.use("Agg")
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
-# ── 한글 폰트 설정 ──
+# ── 한글 폰트 Settings ──
 def _setup_korean_font():
     import matplotlib.font_manager as fm
     import subprocess
@@ -79,7 +79,7 @@ except ImportError:
     FDR_OK = False
 
 # ──────────────────────────────────────────────────────────────
-# 설정
+# Settings
 # ──────────────────────────────────────────────────────────────
 API_BASE = "https://data-dbg.krx.co.kr/svc/apis/sto"
 KRX_ENDPOINTS  = {"KOSPI": "/stk_bydd_trd", "KOSDAQ": "/ksq_bydd_trd"}
@@ -157,7 +157,7 @@ def compute_nhnl_pykrx(market: str, end_date: str, prog=None, auth_key: str = ""
     - Close 기준
     - 52주(252거래일) 신고가/신저가 돌파 종목 수
     - 주간 합계(W-FRI)
-    데이터 소스는 pykrx/FDR 대신 KRX 일별 전체종목 스냅샷 사용.
+    Data Source는 pykrx/FDR 대신 KRX 일별 전체종목 스냅샷 사용.
     """
     if not auth_key or not str(auth_key).strip():
         raise RuntimeError("NH-NL은 현재 KRX API AUTH_KEY 기반으로 계산합니다. 사이드바의 KRX AUTH_KEY를 입력하세요.")
@@ -690,7 +690,7 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
         ),
     )
         # 참고: Plotly 기본 기능상 위 패널 hover만으로 아래 A/D의 대응 y값 가로선까지 자동 표시는 어렵다.
-    # 대신 아래 A/D 패널 hover 시 가로 점선 crosshair가 보이도록 설정했다.
+    # 대신 아래 A/D 패널 hover 시 가로 점선 crosshair가 보이도록 Settings했다.
     return fig
 
 # ──────────────────────────────────────────────────────────────
@@ -707,11 +707,11 @@ def main():
         st.header("⚙️ Settings")
         market = st.selectbox("Market", ["KOSPI", "KOSDAQ"])
 
-        mode = st.radio("데이터 소스", ["☁️ GitHub (빠름)", "🔑 KRX API (직접 수집)"],
+        mode = st.radio("Data Source", ["☁️ GitHub (Fast)", "🔑 KRX API (Direct Collection)"],
                         index=0,
                         help="GitHub: Actions가 매일 자동 업데이트한 CSV 사용\nKRX API: 직접 수집 (AUTH_KEY 필요)")
 
-        if mode == "🔑 KRX API (직접 수집)":
+        if mode == "🔑 KRX API (Direct Collection)":
             auth_key = st.text_input("KRX AUTH_KEY",
                                      value=os.environ.get("KRX_AUTH_KEY", ""),
                                      type="password")
@@ -726,16 +726,16 @@ def main():
             start_dt = today - timedelta(days=730)
             end_dt   = today
 
-        fetch_btn = st.button("🔄 데이터 불러오기", type="primary", width='stretch')
-        if mode == "🔑 KRX API (직접 수집)":
+        fetch_btn = st.button("🔄 Load Data", type="primary", width='stretch')
+        if mode == "🔑 KRX API (Direct Collection)":
             st.caption("💡 새로 불러오고 싶으면 아래 캐시를 지우고 불러오세요.")
 
         st.divider()
         st.subheader("Analysis Parameters")
-        lookback     = st.slider("Lookback (일)",      20, 252, 126)
+        lookback     = st.slider("Lookback (days)",      20, 252, 126)
         chart_months = st.slider("Chart Display Period (months)", 1,  24,  6)
         high_bars    = st.slider("High 탐색 구간 H_b (일)", 10, 500, 60)
-        low_bars     = st.slider("저점 탐색 구간 L_b (일)", 10, 500, 130)
+        low_bars     = st.slider("Low Lookback L_b (days)", 10, 500, 130)
         with st.expander("Threshold Settings"):
             price_thr  = st.number_input("Price Near-High Threshold (%)", value=2.0,  step=0.1)
             ad_thr     = st.number_input("A/D Near-High Threshold (%)",  value=3.0,  step=0.1)
@@ -743,7 +743,7 @@ def main():
             gap_danger = st.number_input("Severe Divergence Threshold (%)",       value=2.5,  step=0.1)
 
         st.divider()
-        st.subheader("💾 저장된 캐시")
+        st.subheader("💾 Cached Files")
         caches = list_caches()
         if caches:
             for p in caches:
@@ -755,14 +755,14 @@ def main():
         else:
             st.caption("No cached files")
 
-    # ── 데이터 불러오기 ──────────────────────────────
+    # ── Load Data ──────────────────────────────
     if not fetch_btn and "df_merged" not in st.session_state:
-        st.info("👈 사이드바에서 마켓 선택 후 **데이터 불러오기** 버튼을 눌러주세요.")
+        st.info("👈 사이드바에서 Market 선택 후 **Load Data** 버튼을 눌러주세요.")
         return
 
     if fetch_btn:
         st.session_state.pop(f"nhnl_{market}", None)
-        if mode == "☁️ GitHub (빠름)":
+        if mode == "☁️ GitHub (Fast)":
             try:
                 with st.spinner("GitHub에서 CSV 읽는 중…"):
                     df = load_from_github(market)
@@ -770,7 +770,7 @@ def main():
                 st.success(f"✅ GitHub 로드 완료 — {len(df)}일치 / 최신: {df['date'].iloc[-1]}")
                 st.session_state[f"nhnl_{market}"] = nhnl_df if nhnl_df is not None and not nhnl_df.empty else None
                 if nhnl_df is None or nhnl_df.empty:
-                    st.info("NH-NL은 왼쪽에서 '🔑 KRX API (직접 수집)'를 선택한 뒤, '데이터 불러오기'를 누르면 함께 로드됩니다.")
+                    st.info("NH-NL은 왼쪽에서 '🔑 KRX API (Direct Collection)'를 선택한 뒤, 'Load Data'를 누르면 함께 로드됩니다.")
             except Exception as e:
                 st.error(f"GitHub 로드 실패: {e}")
                 return
@@ -821,10 +821,10 @@ def main():
         st.session_state["df_merged"] = df
         st.session_state["df_market"] = market
 
-    # 마켓이 바뀌면 세션 초기화
+    # Market이 바뀌면 세션 초기화
     if st.session_state.get("df_market") != market:
         st.session_state.pop("df_merged", None)
-        st.info("마켓이 변경됐어요. 데이터 불러오기를 다시 눌러주세요.")
+        st.info("Market이 변경됐어요. Load Data를 다시 눌러주세요.")
         return
 
     # ── 차트 및 판정 출력 ───────────────────────────
@@ -841,7 +841,7 @@ def main():
     # ── 탭 구성 ──
     # st.tabs 는 서버측에서 active tab을 제어/유지할 수 없어서
     # 버튼 클릭 시 rerun 되면 첫 탭으로 돌아가 보일 수 있음.
-    TAB_LABELS = ["📈 A/D Line", "⚡ 모멘텀", "🏔 NH-NL"]
+    TAB_LABELS = ["📈 A/D Line", "⚡ Momentum", "🏔 NH-NL"]
     current_tab = st.session_state.get("active_tab", TAB_LABELS[0])
     if current_tab not in TAB_LABELS:
         current_tab = TAB_LABELS[0]
@@ -850,7 +850,7 @@ def main():
     _default_idx = TAB_LABELS.index(current_tab)
     if hasattr(st, "segmented_control"):
         active_tab = st.segmented_control(
-            "분석 탭",
+            "Analysis Tab",
             TAB_LABELS,
             selection_mode="single",
             default=TAB_LABELS[_default_idx],
@@ -858,7 +858,7 @@ def main():
         )
     else:
         active_tab = st.radio(
-            "분석 탭",
+            "Analysis Tab",
             TAB_LABELS,
             index=_default_idx,
             horizontal=True,
@@ -904,7 +904,7 @@ def main():
         except Exception as e:
             st.error(f"Chart rendering failed: {e}")
 
-        with st.expander("📋 원시 데이터 보기"):
+        with st.expander("📋 View Raw Data"):
             show = df.copy()
             show["date"] = pd.to_datetime(show["date"].astype(str), format="%Y%m%d").dt.strftime("%Y-%m-%d")
             cols = [c for c in ["date","advances","declines","unchanged",
@@ -914,13 +914,13 @@ def main():
                 width='stretch',
             )
             csv = show.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-            st.download_button("📥 CSV 다운로드", csv,
+            st.download_button("📥 Download CSV", csv,
                                f"{market}_breadth.csv", "text/csv")
 
     # ══════════════════════════════════════════════
     # TAB 2: MI 탄력Index (스탠 와인스태인 책 정의)
     # ══════════════════════════════════════════════
-    elif active_tab == "⚡ 모멘텀":
+    elif active_tab == "⚡ Momentum":
         st.subheader("⚡ MI 탄력Index (Momentum Index)")
         st.caption(
             "스탠 와인스태인 책 정의: 등락종목수 차이(AD)의 200일 롤링 평균. "
@@ -995,10 +995,10 @@ def main():
 
         nhnl_df = st.session_state.get(f"nhnl_{market}")
         if nhnl_df is None or nhnl_df.empty:
-            if mode == "☁️ GitHub (빠름)":
-                st.info("NH-NL은 왼쪽에서 '🔑 KRX API (직접 수집)'를 선택한 뒤, '데이터 불러오기'를 누르면 함께 로드됩니다.")
+            if mode == "☁️ GitHub (Fast)":
+                st.info("NH-NL은 왼쪽에서 '🔑 KRX API (Direct Collection)'를 선택한 뒤, 'Load Data'를 누르면 함께 로드됩니다.")
             else:
-                st.info("KRX 직접 수집 모드에서는 '데이터 불러오기'를 누를 때 NH-NL도 함께 계산합니다.")
+                st.info("KRX 직접 수집 모드에서는 'Load Data'를 누를 때 NH-NL도 함께 계산합니다.")
         if nhnl_df is not None and not nhnl_df.empty:
             from plotly.subplots import make_subplots as _msp2
             nhnl_df["dt"] = pd.to_datetime(nhnl_df["date"].astype(str), format="%Y%m%d")

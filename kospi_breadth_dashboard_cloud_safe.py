@@ -28,7 +28,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # ──────────────────────────────────────────────────────────────
-# 앱 기본 설정
+# 앱 기본 Settings
 # ──────────────────────────────────────────────────────────────
 st.set_page_config(page_title="KOSPI Breadth Analysis Dashboard", page_icon="📊", layout="wide")
 
@@ -460,11 +460,11 @@ def main() -> None:
         start_dt = c1.date_input("Start Date", value=today - timedelta(days=730))
         end_dt = c2.date_input("End Date", value=today)
 
-        fetch_btn = st.button("🔄 데이터 불러오기", type="primary", use_container_width=True)
+        fetch_btn = st.button("🔄 Load Data", type="primary", use_container_width=True)
 
         st.divider()
         st.subheader("Analysis Parameters")
-        lookback = st.slider("Lookback (일)", 20, 252, 126)
+        lookback = st.slider("Lookback (days)", 20, 252, 126)
         chart_months = st.slider("Chart Display Period (months)", 1, 24, 6)
         base_value = st.number_input("A/D Line Base Value", value=50000.0, step=1000.0)
         with st.expander("Threshold Settings"):
@@ -473,7 +473,7 @@ def main() -> None:
             gap_warn = st.number_input("Warning Divergence Threshold (%)", value=1.5, step=0.1)
             gap_danger = st.number_input("Severe Divergence Threshold (%)", value=2.5, step=0.1)
 
-        st.subheader("💾 저장된 캐시")
+        st.subheader("💾 Cached Files")
         caches = list_caches()
         if caches:
             for p in caches:
@@ -564,7 +564,7 @@ def main() -> None:
     except Exception as e:
         st.error(f"Chart rendering failed: {e}")
 
-    with st.expander("📋 원시 데이터 보기"):
+    with st.expander("📋 View Raw Data"):
         show = df.copy()
         show["date"] = pd.to_datetime(show["date"].astype(str), format="%Y%m%d").dt.strftime("%Y-%m-%d")
         st.dataframe(
@@ -585,7 +585,7 @@ def main() -> None:
             use_container_width=True,
         )
         csv = show.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-        st.download_button("📥 CSV 다운로드", csv, f"{market}_breadth.csv", "text/csv")
+        st.download_button("📥 Download CSV", csv, f"{market}_breadth.csv", "text/csv")
 
 
 if __name__ == "__main__":

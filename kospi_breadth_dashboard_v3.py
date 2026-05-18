@@ -34,7 +34,7 @@ matplotlib.use("Agg")
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
-# ── 한글 폰트 설정 ──
+# ── 한글 폰트 Settings ──
 def _setup_korean_font():
     import matplotlib.font_manager as fm
     import subprocess
@@ -84,7 +84,7 @@ except ImportError:
     FDR_OK = False
 
 # ──────────────────────────────────────────────────────────────
-# 설정
+# Settings
 # ──────────────────────────────────────────────────────────────
 API_BASE = "https://data-dbg.krx.co.kr/svc/apis/sto"
 KRX_ENDPOINTS  = {"KOSPI": "/stk_bydd_trd", "KOSDAQ": "/ksq_bydd_trd"}
@@ -162,7 +162,7 @@ def compute_nhnl_pykrx(market: str, end_date: str, prog=None, auth_key: str = ""
     - Close 기준
     - 52주(252거래일) 신고가/신저가 돌파 종목 수
     - 주간 합계(W-FRI)
-    데이터 소스는 pykrx/FDR 대신 KRX 일별 전체종목 스냅샷 사용.
+    Data Source는 pykrx/FDR 대신 KRX 일별 전체종목 스냅샷 사용.
     """
     if not auth_key or not str(auth_key).strip():
         raise RuntimeError("NH-NL은 현재 KRX API AUTH_KEY 기반으로 계산합니다. 사이드바의 KRX AUTH_KEY를 입력하세요.")
@@ -604,7 +604,7 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
     if hlab["bear_div"]:
         _p = hlab["bear_div_pct"]
         if _p >= _danger_pct:
-            div_text  = f"🔴 부정적 불일치 (위험) {_p:.1f}%"
+            div_text  = f"🔴 Negative Divergence (Risk) {_p:.1f}%"
             div_color = "#c62828"
         elif _p >= _warn_pct:
             div_text  = f"🟠 부정적 불일치 (주의) {_p:.1f}%"
@@ -726,7 +726,7 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
         xref="x", yref="y2",
         line=dict(color=lb_color, width=2, dash="dash"))
 
-    # ── Pine: 판정 라벨 — bear=H_b 위치, bull=L_b 위치, 중립=우측끝
+    # ── Pine: 판정 라벨 — bear=H_b 위치, bull=L_b 위치, Neutral=우측끝
     _last_dt = pf["dt"].iloc[-1]
     fig.add_annotation(
         x=_last_dt, y=y2_range[0], xref="x", yref="y2",
@@ -803,11 +803,11 @@ def main():
         st.header("⚙️ Settings")
         market = st.selectbox("Market", ["KOSPI", "KOSDAQ"])
 
-        mode = st.radio("데이터 소스", ["☁️ GitHub (빠름)", "🔑 KRX API (직접 수집)"],
+        mode = st.radio("Data Source", ["☁️ GitHub (Fast)", "🔑 KRX API (Direct Collection)"],
                         index=0,
                         help="GitHub: Actions가 매일 자동 업데이트한 CSV 사용\nKRX API: 직접 수집 (AUTH_KEY 필요)")
 
-        if mode == "🔑 KRX API (직접 수집)":
+        if mode == "🔑 KRX API (Direct Collection)":
             auth_key = st.text_input("KRX AUTH_KEY",
                                      value=os.environ.get("KRX_AUTH_KEY", ""),
                                      type="password")
@@ -822,16 +822,16 @@ def main():
             start_dt = today - timedelta(days=730)
             end_dt   = today
 
-        fetch_btn = st.button("🔄 데이터 불러오기", type="primary", width='stretch')
-        if mode == "🔑 KRX API (직접 수집)":
+        fetch_btn = st.button("🔄 Load Data", type="primary", width='stretch')
+        if mode == "🔑 KRX API (Direct Collection)":
             st.caption("💡 새로 불러오고 싶으면 아래 캐시를 지우고 불러오세요.")
 
         st.divider()
         st.subheader("Analysis Parameters")
-        lookback     = st.slider("Lookback (일)",      20, 252, 126)
+        lookback     = st.slider("Lookback (days)",      20, 252, 126)
         chart_months = st.slider("Chart Display Period (months)", 1,  24,  6)
         high_bars    = st.slider("High 탐색 구간 H_b (일)", 10, 500, 30)
-        low_bars     = st.slider("저점 탐색 구간 L_b (일)", 10, 500, 30)
+        low_bars     = st.slider("Low Lookback L_b (days)", 10, 500, 30)
         with st.expander("Threshold Settings"):
             price_thr  = st.number_input("Price Near-High Threshold (%)", value=2.0,  step=0.1)
             ad_thr     = st.number_input("A/D Near-High Threshold (%)",  value=3.0,  step=0.1)
@@ -839,7 +839,7 @@ def main():
             gap_danger = st.number_input("Severe Divergence Threshold (%)",       value=2.5,  step=0.1)
 
         st.divider()
-        st.subheader("💾 저장된 캐시")
+        st.subheader("💾 Cached Files")
         caches = list_caches()
         if caches:
             for p in caches:
@@ -851,14 +851,14 @@ def main():
         else:
             st.caption("No cached files")
 
-    # ── 데이터 불러오기 ──────────────────────────────
+    # ── Load Data ──────────────────────────────
     if not fetch_btn and "df_merged" not in st.session_state:
-        st.info("👈 사이드바에서 마켓 선택 후 **데이터 불러오기** 버튼을 눌러주세요.")
+        st.info("👈 사이드바에서 Market 선택 후 **Load Data** 버튼을 눌러주세요.")
         return
 
     if fetch_btn:
         st.session_state.pop(f"nhnl_{market}", None)
-        if mode == "☁️ GitHub (빠름)":
+        if mode == "☁️ GitHub (Fast)":
             try:
                 with st.spinner("GitHub에서 CSV 읽는 중…"):
                     load_from_github.clear()
@@ -922,10 +922,10 @@ def main():
         st.session_state["df_merged"] = df
         st.session_state["df_market"] = market
 
-    # 마켓이 바뀌면 세션 초기화
+    # Market이 바뀌면 세션 초기화
     if st.session_state.get("df_market") != market:
         st.session_state.pop("df_merged", None)
-        st.info("마켓이 변경됐어요. 데이터 불러오기를 다시 눌러주세요.")
+        st.info("Market이 변경됐어요. Load Data를 다시 눌러주세요.")
         return
 
     # ── 차트 및 판정 출력 ───────────────────────────
@@ -942,14 +942,14 @@ def main():
     # ── 탭 구성 ──
     # st.tabs 는 서버측에서 active tab을 제어/유지할 수 없어서
     # 버튼 클릭 시 rerun 되면 첫 탭으로 돌아가 보일 수 있음.
-    TAB_LABELS = ["📈 A/D Line", "⚡ 모멘텀", "🏔 NH-NL"]
+    TAB_LABELS = ["📈 A/D Line", "⚡ Momentum", "🏔 NH-NL"]
     if "active_tab" not in st.session_state:
         st.session_state["active_tab"] = TAB_LABELS[0]
 
     _default_idx = TAB_LABELS.index(st.session_state.get("active_tab", TAB_LABELS[0]))
     if hasattr(st, "segmented_control"):
         active_tab = st.segmented_control(
-            "분석 탭",
+            "Analysis Tab",
             TAB_LABELS,
             selection_mode="single",
             default=TAB_LABELS[_default_idx],
@@ -957,7 +957,7 @@ def main():
         )
     else:
         active_tab = st.radio(
-            "분석 탭",
+            "Analysis Tab",
             TAB_LABELS,
             index=_default_idx,
             horizontal=True,
@@ -981,7 +981,7 @@ def main():
         _bdp  = hlab["bear_div_pct"]
         _bup  = hlab["bull_div_pct"]
         if _bear and _bdp >= 2.0:
-            _status = "🔴 부정적 불일치 (위험)"
+            _status = "🔴 Negative Divergence (Risk)"
             _note   = f"H_b 신High / A/D {_bdp:.2f}% 뒤처짐"
             _scolor = "#c62828"
         elif _bear and _bdp >= 0.5:
@@ -1001,7 +1001,7 @@ def main():
             _note   = "L_b 신저점 / A/D 소폭 상승"
             _scolor = "#1565c0"
         else:
-            _status = "중립"
+            _status = "Neutral"
             _note   = "불일치 없음"
             _scolor = "#757575"
 
@@ -1018,7 +1018,7 @@ def main():
         c1, c2, c3 = st.columns(3)
         c1.metric("Latest Date", pd.to_datetime(str(last["date"]), format="%Y%m%d").strftime("%Y-%m-%d"))
         c2.metric(f"{market} Close", f"{float(last['close']):,.2f}")
-        c3.metric("오늘 A/D 차이", f"{int(last['ad_diff']):+,}")
+        c3.metric("Daily A/D Diff", f"{int(last['ad_diff']):+,}")
 
         try:
             fig_main, ad_lookup = make_plotly_chart(df, market, sig, chart_months, hlab)
@@ -1109,7 +1109,7 @@ def main():
             st.error(f"Chart rendering failed: {e}")
 
         # Pine 테이블 재현: 차트 아래
-        # bear_div → H_a/H_b 표만, bull_div → L_a/L_b 표만, 중립 → 둘 다
+        # bear_div → H_a/H_b 표만, bull_div → L_a/L_b 표만, Neutral → 둘 다
         st.markdown("---")
         if _bear:
             # 부정적 불일치: High 비교만 표시
@@ -1136,7 +1136,7 @@ def main():
 | 판정 | {_status} |
 """)
         else:
-            # 중립: 둘 다 표시
+            # Neutral: 둘 다 표시
             col_h, col_l = st.columns(2)
             with col_h:
                 st.markdown(f"""
@@ -1162,7 +1162,7 @@ def main():
 """)
         st.markdown("---")
 
-        with st.expander("📋 원시 데이터 보기"):
+        with st.expander("📋 View Raw Data"):
             show = df.copy()
             show["date"] = pd.to_datetime(show["date"].astype(str), format="%Y%m%d").dt.strftime("%Y-%m-%d")
             cols = [c for c in ["date","advances","declines","unchanged",
@@ -1172,13 +1172,13 @@ def main():
                 width='stretch',
             )
             csv = show.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-            st.download_button("📥 CSV 다운로드", csv,
+            st.download_button("📥 Download CSV", csv,
                                f"{market}_breadth.csv", "text/csv")
 
     # ══════════════════════════════════════════════
     # TAB 2: MI 탄력Index (스탠 와인스태인 책 정의)
     # ══════════════════════════════════════════════
-    elif active_tab == "⚡ 모멘텀":
+    elif active_tab == "⚡ Momentum":
         st.subheader("⚡ MI 탄력Index (Momentum Index)")
         st.caption(
             "스탠 와인스태인 책 정의: 등락종목수 차이(AD)의 200일 롤링 평균. "
@@ -1274,10 +1274,10 @@ def main():
 
         nhnl_df = st.session_state.get(f"nhnl_{market}")
         if nhnl_df is None or nhnl_df.empty:
-            if mode == "☁️ GitHub (빠름)":
-                st.info("GitHub 빠른 모드에서는 저장된 NH-NL CSV가 있을 때만 NH-NL을 표시합니다. 데이터 불러오기 시 함께 로드됩니다.")
+            if mode == "☁️ GitHub (Fast)":
+                st.info("GitHub 빠른 모드에서는 저장된 NH-NL CSV가 있을 때만 NH-NL을 표시합니다. Load Data 시 함께 로드됩니다.")
             else:
-                st.info("KRX 직접 수집 모드에서는 '데이터 불러오기'를 누를 때 NH-NL도 함께 계산합니다.")
+                st.info("KRX 직접 수집 모드에서는 'Load Data'를 누를 때 NH-NL도 함께 계산합니다.")
         if nhnl_df is not None and not nhnl_df.empty:
             from plotly.subplots import make_subplots as _msp2
             nhnl_df["dt"] = pd.to_datetime(nhnl_df["date"].astype(str), format="%Y%m%d")
@@ -1370,7 +1370,7 @@ def main():
             elif _daily_nhnl < 0:
                 _daily_verdict = "🔴 약세"
             else:
-                _daily_verdict = "🟡 중립"
+                _daily_verdict = "🟡 Neutral"
             d4.metric("일별 판정", _daily_verdict)
 
             # Index 같은 기간
@@ -1545,10 +1545,10 @@ def main():
                 _this_fri_confirmed = _today > _this_fri or _this_week_daily.empty
                 if not _this_fri_confirmed:
                     # ── 시나리오 3개 ──────────────────────────────────
-                    # 직전 4주 일평균들로 낙관/중립/비관 계산
+                    # 직전 4주 일평균들로 낙관/Neutral/비관 계산
                     _recent4 = _prev_weekly.tail(4)["nhnl"].values / 5.0  # 주간값 ÷ 5 = 일평균
                     _avg_opt  = int(float(max(_recent4)) * 5)   # 낙관: 직전 4주 중 최고
-                    _avg_base = _est_nhnl                        # 중립: 현재 페이스
+                    _avg_base = _est_nhnl                        # Neutral: 현재 페이스
                     _avg_pes  = int(float(min(_recent4)) * 5)   # 비관: 직전 4주 중 최저
 
                     # 값 기준 내림차순 정렬 (높은 게 낙관, 낮은 게 비관)
@@ -1556,7 +1556,7 @@ def main():
                     _scenarios = [
                         # (label, legend_sym, est, color, marker_symbol, marker_size)
                         ("낙관", "▲", _s_vals[0], "rgba(100,220,130,0.95)", "triangle-up",   13),
-                        ("중립", "◆", _s_vals[1], "rgba(255,210,60,0.95)",  "diamond",        11),
+                        ("Neutral", "◆", _s_vals[1], "rgba(255,210,60,0.95)",  "diamond",        11),
                         ("비관", "▼", _s_vals[2], "rgba(255,80,80,0.95)",   "triangle-down",  13),
                     ]
 
@@ -1612,7 +1612,7 @@ def main():
                              f"_this_fri_confirmed: {_this_fri_confirmed}")
                     if not _this_fri_confirmed:
                         st.write(f"시나리오 시작 x: {_scenario_start_x} | 시작 y: {_scenario_start_y}")
-                        st.write(f"낙관: {_s_vals[0]} | 중립: {_s_vals[1]} | 비관: {_s_vals[2]}")
+                        st.write(f"낙관: {_s_vals[0]} | Neutral: {_s_vals[1]} | 비관: {_s_vals[2]}")
                         st.write(f"y_min: {_y_min:.0f} | y_max: {_y_max:.0f}")
                 except Exception as _dbg_e:
                     st.write(f"디버그 오류: {_dbg_e}")
@@ -1802,13 +1802,13 @@ def main():
             st.caption(
                 "📌 금요일 NH-NL 예상 (긴점선) — "
                 "▲ **낙관**: 직전 4주 최고 주간 일평균 × 5 | "
-                "◆ **중립**: 이번 주 현재 페이스 × 5 | "
+                "◆ **Neutral**: 이번 주 현재 페이스 × 5 | "
                 "▼ **비관**: 직전 4주 최저 주간 일평균 × 5  |  "
                 "● **실제 NH-NL**: 주간 확정값 (실선)"
             )
 
             # 원시 데이터 — 일별 우선, 없으면 주간
-            with st.expander("📋 원시 데이터 보기", expanded=False):
+            with st.expander("📋 View Raw Data", expanded=False):
                 _nhnl_daily_raw = st.session_state.get(f"nhnl_daily_{market}")
                 if _nhnl_daily_raw is not None and not _nhnl_daily_raw.empty:
                     _daily_disp = _nhnl_daily_raw.copy()

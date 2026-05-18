@@ -30,7 +30,7 @@ matplotlib.use("Agg")
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
-# ── 한글 폰트 설정 ──
+# ── 한글 폰트 Settings ──
 def _setup_korean_font():
     import matplotlib.font_manager as fm
     import subprocess
@@ -78,7 +78,7 @@ except ImportError:
     FDR_OK = False
 
 # ──────────────────────────────────────────────────────────────
-# 설정
+# Settings
 # ──────────────────────────────────────────────────────────────
 API_BASE = "https://data-dbg.krx.co.kr/svc/apis/sto"
 KRX_ENDPOINTS  = {"KOSPI": "/stk_bydd_trd", "KOSDAQ": "/ksq_bydd_trd"}
@@ -388,11 +388,11 @@ def main():
         st.header("⚙️ Settings")
         market = st.selectbox("Market", ["KOSPI", "KOSDAQ"])
 
-        # 데이터 소스 선택
-        mode = st.radio("데이터 소스", ["☁️ GitHub (빠름)", "🔑 KRX API (직접 수집)"],
+        # Data Source 선택
+        mode = st.radio("Data Source", ["☁️ GitHub (Fast)", "🔑 KRX API (Direct Collection)"],
                         index=0, help="GitHub: 미리 push된 CSV를 읽음 (빠름)\nKRX API: 직접 수집 (느림, AUTH_KEY 필요)")
 
-        if mode == "🔑 KRX API (직접 수집)":
+        if mode == "🔑 KRX API (Direct Collection)":
             auth_key = st.text_input("KRX AUTH_KEY",
                                      value=os.environ.get("KRX_AUTH_KEY", ""),
                                      type="password")
@@ -404,14 +404,14 @@ def main():
         else:
             auth_key = ""
 
-        fetch_btn = st.button("🔄 데이터 불러오기", type="primary", use_container_width=True)
+        fetch_btn = st.button("🔄 Load Data", type="primary", use_container_width=True)
 
-        if mode == "🔑 KRX API (직접 수집)":
+        if mode == "🔑 KRX API (Direct Collection)":
             st.caption("💡 새로 불러오고 싶으면 아래 캐시를 지우고 불러오세요.")
 
         st.divider()
         st.subheader("Analysis Parameters")
-        lookback     = st.slider("Lookback (일)",      20, 252, 126)
+        lookback     = st.slider("Lookback (days)",      20, 252, 126)
         chart_months = st.slider("Chart Display Period (months)", 1,  24,  6)
         with st.expander("Threshold Settings"):
             price_thr  = st.number_input("Price Near-High Threshold (%)", value=2.0,  step=0.1)
@@ -419,9 +419,9 @@ def main():
             gap_warn   = st.number_input("Warning Divergence Threshold (%)",       value=1.5,  step=0.1)
             gap_danger = st.number_input("Severe Divergence Threshold (%)",       value=2.5,  step=0.1)
 
-        if mode == "🔑 KRX API (직접 수집)":
+        if mode == "🔑 KRX API (Direct Collection)":
             st.divider()
-            st.subheader("💾 저장된 캐시")
+            st.subheader("💾 Cached Files")
             caches = list_caches()
             if caches:
                 for p in caches:
@@ -433,13 +433,13 @@ def main():
             else:
                 st.caption("No cached files")
 
-    # ── 데이터 불러오기 ──────────────────────────────
+    # ── Load Data ──────────────────────────────
     if not fetch_btn and "df_merged" not in st.session_state:
-        st.info("👈 사이드바에서 마켓 선택 후 **데이터 불러오기** 버튼을 눌러주세요.")
+        st.info("👈 사이드바에서 Market 선택 후 **Load Data** 버튼을 눌러주세요.")
         return
 
     if fetch_btn:
-        if mode == "☁️ GitHub (빠름)":
+        if mode == "☁️ GitHub (Fast)":
             try:
                 with st.spinner("GitHub에서 CSV 읽는 중…"):
                     df = load_from_github(market)
@@ -476,10 +476,10 @@ def main():
         st.session_state["df_merged"] = df
         st.session_state["df_market"] = market
 
-    # 마켓이 바뀌면 세션 초기화
+    # Market이 바뀌면 세션 초기화
     if st.session_state.get("df_market") != market:
         st.session_state.pop("df_merged", None)
-        st.info("마켓이 변경됐어요. 데이터 불러오기를 다시 눌러주세요.")
+        st.info("Market이 변경됐어요. Load Data를 다시 눌러주세요.")
         return
 
     # ── 차트 및 판정 출력 ───────────────────────────
@@ -493,7 +493,7 @@ def main():
     last = df.iloc[-1]
 
     # ── 탭 구성 ──
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 A/D Line", "⚡ 모멘텀", "🏔 High-저점(NH-NL)", "📊 P/D 비율"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 A/D Line", "⚡ Momentum", "🏔 High-저점(NH-NL)", "📊 P/D 비율"])
 
     # ══════════════════════════════════════════════
     # TAB 1: 기존 A/D Line 분석
@@ -533,7 +533,7 @@ def main():
         except Exception as e:
             st.error(f"Chart rendering failed: {e}")
 
-        with st.expander("📋 원시 데이터 보기"):
+        with st.expander("📋 View Raw Data"):
             show = df.copy()
             show["date"] = pd.to_datetime(show["date"].astype(str), format="%Y%m%d").dt.strftime("%Y-%m-%d")
             st.dataframe(
@@ -543,14 +543,14 @@ def main():
                 use_container_width=True,
             )
             csv = show.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
-            st.download_button("📥 CSV 다운로드", csv,
+            st.download_button("📥 Download CSV", csv,
                                f"{market}_breadth.csv", "text/csv")
 
     # ══════════════════════════════════════════════
-    # TAB 2: 모멘텀 Index
+    # TAB 2: Momentum Index
     # ══════════════════════════════════════════════
     with tab2:
-        st.subheader("⚡ 브레드스 모멘텀 Index")
+        st.subheader("⚡ 브레드스 Momentum Index")
         st.caption("등락종목수 단기MA - 장기MA 오실레이터. 0선 위 = 강세, 아래 = 약세")
 
         ma_fast = st.slider("단기 MA", 5, 30, 10, key="mom_fast")
@@ -580,7 +580,7 @@ def main():
         mom_color = "#00897b" if last_mom >= 0 else "#c62828"
 
         m1, m2, m3 = st.columns(3)
-        m1.metric("모멘텀 (현재)", f"{last_mom:+.1f}")
+        m1.metric("Momentum (현재)", f"{last_mom:+.1f}")
         m2.metric("시그널 (10MA)", f"{last_sig:+.1f}")
         m3.metric("판정", mom_verdict)
 
@@ -588,7 +588,7 @@ def main():
         fig_mom.add_trace(go.Bar(
             x=pf2["dt"], y=mom_plot,
             marker_color=[("#26a69a" if v >= 0 else "#ef5350") for v in mom_plot],
-            name="모멘텀", opacity=0.7
+            name="Momentum", opacity=0.7
         ))
         fig_mom.add_trace(go.Scatter(
             x=pf2["dt"], y=signal_line,
@@ -597,7 +597,7 @@ def main():
         ))
         fig_mom.add_hline(y=0, line_color="gray", line_dash="dot")
         fig_mom.update_layout(
-            title=f"{market} 브레드스 모멘텀 ({ma_fast}MA - {ma_slow}MA)",
+            title=f"{market} 브레드스 Momentum ({ma_fast}MA - {ma_slow}MA)",
             template="plotly_dark", height=400,
             legend=dict(orientation="h", y=1.05)
         )
@@ -693,7 +693,7 @@ def main():
                       "🟢 과매도 — 반등 가능"     if last_pd <= pd_os else
                       "🟢 강세"                   if last_pd > 1.5 else
                       "🟢 양호"                   if last_pd > 1.0 else
-                      "🟠 약세"                   if last_pd < 0.7 else "⚪ 중립")
+                      "🟠 약세"                   if last_pd < 0.7 else "⚪ Neutral")
         pd_color = ("#c62828" if last_pd >= pd_ob else
                     "#00897b" if last_pd <= pd_os else
                     "#2e7d32" if last_pd > 1.0 else "#ef6c00")
