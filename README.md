@@ -199,28 +199,3 @@ repository/
 This project is for educational, research, and software engineering portfolio purposes only.
 
 It is not financial advice, investment recommendation, or a trading signal service. All investment decisions are the responsibility of the user.
-
----
-
-## Suggested Repository Metadata
-
-### About
-
-```text
-Automated breadth analysis dashboard using Python, Streamlit, time-series indicators, and A/D line visualization.
-```
-
-### Topics
-
-```text
-python
-streamlit
-dashboard
-data-pipeline
-automation
-breadth-analysis
-ad-line
-time-series
-visualization
-market-data
-```

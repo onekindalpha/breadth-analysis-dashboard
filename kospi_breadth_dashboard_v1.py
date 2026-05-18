@@ -87,13 +87,13 @@ FDR_SYMBOLS    = {"KOSPI": "KS11",          "KOSDAQ": "KQ11"}
 CACHE_DIR      = Path("./breadth_cache")
 
 STATUS_MAP = {
-    "BULLISH_CONFIRMATION":         ("✅ 상승 확인",           "가격·A/D선 모두 고점 근접 (동행)",                   "#2e7d32"),
-    "BULLISH_DIVERGENCE":           ("🔴 심각한 A/D 미확인",   "가격 고점인데 A/D선이 크게 뒤처짐",                  "#c62828"),
-    "BULLISH_DIVERGENCE_CANDIDATE": ("🟠 A/D 초기 경고",       "가격이 A/D선보다 빠르게 회복 중",                    "#ef6c00"),
-    "RECOVERY_IN_PROGRESS":         ("🟡 회복 진행 중",         "가격 고점 재공략 중, 브레드스 미확인",                "#f9a825"),
-    "DOWNSIDE_DIVERGENCE_CANDIDATE":("🟢 하락 다이버전스",      "가격 저점 근접, A/D선은 저점 미확인",                 "#00838f"),
-    "NORMAL_WEAKNESS":              ("⚫ 전반적 약세",           "가격·A/D선 모두 저점 근접",                          "#455a64"),
-    "NEUTRAL":                      ("⬜ 중립",                 "뚜렷한 신호 없음",                                   "#757575"),
+    "BULLISH_CONFIRMATION":         ("✅ Bullish Confirmation",           "가격·A/D선 모두 High 근접 (동행)",                   "#2e7d32"),
+    "BULLISH_DIVERGENCE":           ("🔴⚠️ Severe A/D Divergence",   "가격 High인데 A/D선이 크게 뒤처짐",                  "#c62828"),
+    "BULLISH_DIVERGENCE_CANDIDATE": ("🟠⚠️ Early A/D Warning",       "Price is recovering faster than the A/D line",                    "#ef6c00"),
+    "RECOVERY_IN_PROGRESS":         ("🟡Recovery in Progress",         "가격 High 재공략 중, 브레드스 미확인",                "#f9a825"),
+    "DOWNSIDE_DIVERGENCE_CANDIDATE":("🟢Downside Divergence",      "Price is near lows while A/D line does not confirm lows",                 "#00838f"),
+    "NORMAL_WEAKNESS":              ("⚫ Broad Weakness",           "Price and A/D line are both near recent lows",                          "#455a64"),
+    "NEUTRAL":                      ("⬜ Neutral",                 "No clear signal",                                   "#757575"),
 }
 
 # ──────────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ def compute_nhnl_pykrx(market: str, end_date: str, prog=None, auth_key: str = ""
     """
     책 기준 NH-NL 구현:
     - 보통주 중심
-    - 종가 기준
+    - Close 기준
     - 52주(252거래일) 신고가/신저가 돌파 종목 수
     - 주간 합계(W-FRI)
     데이터 소스는 pykrx/FDR 대신 KRX 일별 전체종목 스냅샷 사용.
@@ -200,7 +200,7 @@ def compute_nhnl_pykrx(market: str, end_date: str, prog=None, auth_key: str = ""
             daily_frames.append(df[["date", "code", "name", "close"]])
 
         if prog:
-            prog.progress(i / total, text=f"NH-NL 계산용 KRX 수집 중… {bas_dd} ({i}/{total})")
+            prog.progress(i / total, text=f"NH-NL 계산용 KRX Collecting... {bas_dd} ({i}/{total})")
 
     if not daily_frames:
         raise RuntimeError("NH-NL 계산용 KRX 일별 종목 데이터가 없습니다.")
@@ -308,7 +308,7 @@ def build_breadth(auth_key, start, end, market, base_value=50000.0):
     dates = pd.bdate_range(pd.to_datetime(start), pd.to_datetime(end))
     rows, ad_line = [], base_value
     session = requests.Session()
-    prog = st.progress(0, text="KRX 브레드스 수집 중…")
+    prog = st.progress(0, text="Collecting KRX breadth data...")
     for i, dt in enumerate(dates, 1):
         bas_dd = dt.strftime("%Y%m%d")
         try:
@@ -320,7 +320,7 @@ def build_breadth(auth_key, start, end, market, base_value=50000.0):
                              "unchanged": unch, "ad_diff": adv - decl, "ad_line": ad_line})
         except Exception as e:
             st.warning(f"{bas_dd} 스킵: {e}")
-        prog.progress(i / len(dates), text=f"수집 중… {bas_dd} ({i}/{len(dates)})")
+        prog.progress(i / len(dates), text=f"Collecting... {bas_dd} ({i}/{len(dates)})")
     prog.empty()
     if not rows:
         raise RuntimeError("수집된 데이터 없음")
@@ -386,7 +386,7 @@ def load_nhnl_from_github(market: str) -> pd.DataFrame | None:
     return df.sort_values("date").reset_index(drop=True)
 
 # ──────────────────────────────────────────────────────────────
-# 지수 OHLC
+# Index OHLC
 # ──────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_index_ohlc(market, start, end):
@@ -423,7 +423,7 @@ def fetch_index_ohlc(market, start, end):
 def classify(price_off_high, ad_off_high, gap,
              price_off_low, ad_off_low,
              price_thr=2.0, ad_thr=3.0, gap_warn=1.5, gap_danger=2.5):
-    # 직관적 부호: - = 고점 아래, + = 고점 위
+    # 직관적 부호: - = High 아래, + = High 위
     # gap = adOff - priceOff: + = A/D 선행(좋음), - = A/D 지연(나쁨)
     ph = price_off_high >= -price_thr
     ah = ad_off_high    >= -ad_thr
@@ -458,7 +458,7 @@ def compute_signals(df, lookback, price_thr, ad_thr, gap_warn, gap_danger):
     ad_off_low    = (last_ad    - ad_low)    / abs(ad_low)    * 100 if ad_low    else float("nan")
 
     peak_date  = str(df["date"].iloc[-(days_ago + 1)])
-    peak_label = "오늘" if days_ago == 0 else f"{days_ago}일전 ({peak_date})"
+    peak_label = "Today" if days_ago == 0 else f"{days_ago} days ago ({peak_date})"
     status_key = classify(price_off, ad_off, gap, price_off_low, ad_off_low,
                           price_thr, ad_thr, gap_warn, gap_danger)
     verdict, note, color = STATUS_MAP[status_key]
@@ -473,8 +473,8 @@ def compute_signals(df, lookback, price_thr, ad_thr, gap_warn, gap_danger):
 def compute_hlab(df: pd.DataFrame, high_bars: int = 60, low_bars: int = 130) -> dict:
     """
     파인스크립트 v16과 동일한 로직:
-    H_b = 최근 high_bars 구간 고점
-    H_a = 그 이전 high_bars 구간 고점
+    H_b = 최근 high_bars 구간 High
+    H_a = 그 이전 high_bars 구간 High
     L_b = 최근 low_bars 구간 저점
     L_a = 그 이전 low_bars 구간 저점
     """
@@ -679,7 +679,7 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
             domain=[0, 1],
         ),
         yaxis=dict(
-            title="지수", domain=[0.52, 1.0], range=y1_range,
+            title="Index", domain=[0.52, 1.0], range=y1_range,
             showspikes=True, spikemode="across", spikesnap="hovered data",
             spikethickness=1, spikecolor="rgba(200,200,200,0.35)", spikedash="dot",
         ),
@@ -697,15 +697,15 @@ def make_plotly_chart(df: pd.DataFrame, market: str, sig: dict,
 # 메인 앱
 # ──────────────────────────────────────────────────────────────
 def main():
-    st.set_page_config(page_title="국장 브레드스 대시보드",
+    st.set_page_config(page_title="KOSPI Breadth Analysis Dashboard",
                        page_icon="📊", layout="wide")
     st.title("📊 국장 A/D Line 브레드스 대시보드")
-    st.caption("KRX 상승·하락 종목 수 기반 / 스탠 와인스태인 브레드스 분석")
+    st.caption("A/D Line · Breadth Thrust · Price-Breadth Divergence")
 
     # ── 사이드바 ──────────────────────────────────────
     with st.sidebar:
-        st.header("⚙️ 설정")
-        market = st.selectbox("마켓", ["KOSPI", "KOSDAQ"])
+        st.header("⚙️ Settings")
+        market = st.selectbox("Market", ["KOSPI", "KOSDAQ"])
 
         mode = st.radio("데이터 소스", ["☁️ GitHub (빠름)", "🔑 KRX API (직접 수집)"],
                         index=0,
@@ -717,9 +717,9 @@ def main():
                                      type="password")
             c1, c2 = st.columns(2)
             today = datetime.today()
-            start_dt = c1.date_input("시작일", value=today - timedelta(days=730))
-            end_dt   = c2.date_input("종료일", value=today)
-            base_value = st.number_input("A/D Line 시작값", value=50000.0, step=1000.0)
+            start_dt = c1.date_input("Start Date", value=today - timedelta(days=730))
+            end_dt   = c2.date_input("End Date", value=today)
+            base_value = st.number_input("A/D Line Base Value", value=50000.0, step=1000.0)
         else:
             auth_key = ""
             today = datetime.today()
@@ -731,16 +731,16 @@ def main():
             st.caption("💡 새로 불러오고 싶으면 아래 캐시를 지우고 불러오세요.")
 
         st.divider()
-        st.subheader("분석 파라미터")
+        st.subheader("Analysis Parameters")
         lookback     = st.slider("Lookback (일)",      20, 252, 126)
-        chart_months = st.slider("차트 표시 기간 (월)", 1,  24,  6)
-        high_bars    = st.slider("고점 탐색 구간 H_b (일)", 10, 500, 60)
+        chart_months = st.slider("Chart Display Period (months)", 1,  24,  6)
+        high_bars    = st.slider("High 탐색 구간 H_b (일)", 10, 500, 60)
         low_bars     = st.slider("저점 탐색 구간 L_b (일)", 10, 500, 130)
-        with st.expander("임계값 세부 설정"):
-            price_thr  = st.number_input("가격 고점 근접 기준 %", value=2.0,  step=0.1)
-            ad_thr     = st.number_input("A/D 고점 근접 기준 %",  value=3.0,  step=0.1)
-            gap_warn   = st.number_input("경고 괴리 기준 %",       value=1.5,  step=0.1)
-            gap_danger = st.number_input("위험 괴리 기준 %",       value=2.5,  step=0.1)
+        with st.expander("Threshold Settings"):
+            price_thr  = st.number_input("Price Near-High Threshold (%)", value=2.0,  step=0.1)
+            ad_thr     = st.number_input("A/D Near-High Threshold (%)",  value=3.0,  step=0.1)
+            gap_warn   = st.number_input("Warning Divergence Threshold (%)",       value=1.5,  step=0.1)
+            gap_danger = st.number_input("Severe Divergence Threshold (%)",       value=2.5,  step=0.1)
 
         st.divider()
         st.subheader("💾 저장된 캐시")
@@ -753,7 +753,7 @@ def main():
                     p.unlink()
                     st.rerun()
         else:
-            st.caption("저장된 캐시 없음")
+            st.caption("No cached files")
 
     # ── 데이터 불러오기 ──────────────────────────────
     if not fetch_btn and "df_merged" not in st.session_state:
@@ -776,7 +776,7 @@ def main():
                 return
         else:
             if not auth_key:
-                st.error("KRX AUTH_KEY를 입력해주세요.")
+                st.error("Please enter your KRX AUTH_KEY.")
                 return
             start_str = start_dt.strftime("%Y%m%d")
             end_str   = end_dt.strftime("%Y%m%d")
@@ -787,7 +787,7 @@ def main():
                     st.success(f"✅ 캐시에서 로드 ({market} {start_str}~{end_str})")
                     df = cached
                 else:
-                    with st.spinner("지수 OHLC 수집 중…"):
+                    with st.spinner("Index OHLC Collecting..."):
                         index_df = fetch_index_ohlc(market, start_str, end_str)
                     breadth_df = build_breadth(auth_key, start_str, end_str, market, 50000.0)
                     df = breadth_df.merge(
@@ -795,13 +795,13 @@ def main():
                         on="date", how="inner"
                     ).sort_values("date").reset_index(drop=True)
                     save_cache(df, market, start_str, end_str, 50000.0)
-                    st.success(f"✅ A/D 데이터 수집 완료 — {len(df)}일치")
+                    st.success(f"✅ A/D 데이터 Collection completed — {len(df)}일치")
 
                 if nhnl_cached is not None and not nhnl_cached.empty:
                     nhnl_df = nhnl_cached
                     st.success(f"✅ NH-NL 캐시 로드 — {len(nhnl_df)}주치")
                 else:
-                    prog3 = st.progress(0, text="NH-NL 계산용 KRX 수집 중…")
+                    prog3 = st.progress(0, text="NH-NL 계산용 KRX Collecting...")
                     nhnl_df = compute_nhnl_pykrx(
                         market,
                         end_str,
@@ -815,7 +815,7 @@ def main():
                         st.success(f"✅ NH-NL 계산 완료 — {len(nhnl_df)}주치")
                 st.session_state[f"nhnl_{market}"] = nhnl_df if nhnl_df is not None and not nhnl_df.empty else None
             except Exception as e:
-                st.error(f"데이터 수집 실패: {type(e).__name__}: {e}")
+                st.error(f"Data collection failed: {type(e).__name__}: {e}")
                 return
 
         st.session_state["df_merged"] = df
@@ -831,7 +831,7 @@ def main():
     df = st.session_state["df_merged"]
 
     if len(df) < lookback:
-        st.warning(f"데이터 부족: {len(df)}행 (lookback={lookback})")
+        st.warning(f"Not enough data: {len(df)}행 (lookback={lookback})")
         return
 
     sig  = compute_signals(df, lookback, price_thr, ad_thr, gap_warn, gap_danger)
@@ -874,27 +874,27 @@ def main():
         gap_arrow = "▲" if sig["gap"] >= 0 else "▼"
         st.markdown(
             f'<div style="text-align:center;padding:6px 0 2px 0">'
-            f'<span style="font-size:0.85em;color:#aaaaaa">괴리 (A/D − 가격)</span><br>'
+            f'<span style="font-size:0.85em;color:#aaaaaa">Divergence (A/D − Price)</span><br>'
             f'<span style="font-size:2.6em;font-weight:900;color:{gap_color}">'
             f'{gap_arrow} {sig["gap"]:+.2f}%</span>'
             f'<span style="font-size:0.8em;color:#aaaaaa;margin-left:8px">'
-            f'기준: {sig["peak_label"]}</span>'
+            f'Reference: {sig["peak_label"]}</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("최근 날짜",
+        c1.metric("Latest Date",
                   pd.to_datetime(str(last["date"]), format="%Y%m%d").strftime("%Y-%m-%d"))
-        c2.metric(f"{market} 종가", f"{float(last['close']):,.2f}")
-        c3.metric("오늘 AD 차이",   f"{int(last['ad_diff']):+,}")
-        c4.metric("가격 고점 대비", f"{sig['price_off']:.2f}%")
-        c5.metric("A/D 고점 대비",  f"{sig['ad_off']:.2f}%")
+        c2.metric(f"{market} Close", f"{float(last['close']):,.2f}")
+        c3.metric("Daily A/D Diff",   f"{int(last['ad_diff']):+,}")
+        c4.metric("Price vs High", f"{sig['price_off']:.2f}%")
+        c5.metric("A/D vs High",  f"{sig['ad_off']:.2f}%")
 
         st.markdown(
             f'<div style="background:{sig["color"]};padding:12px 18px;border-radius:8px;margin:8px 0">'
             f'<b style="font-size:1.2em;color:white">{sig["verdict"]}</b>'
             f'&nbsp;&nbsp;<span style="color:#ffffffcc">{sig["note"]}</span>'
-            f'&nbsp;&nbsp;<span style="color:#ffffffaa;font-size:0.9em">기준: {sig["peak_label"]}</span>'
+            f'&nbsp;&nbsp;<span style="color:#ffffffaa;font-size:0.9em">Reference: {sig["peak_label"]}</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
@@ -902,7 +902,7 @@ def main():
             fig_main = make_plotly_chart(df, market, sig, chart_months, hlab)
             st.plotly_chart(fig_main, width='stretch')
         except Exception as e:
-            st.error(f"차트 렌더링 실패: {e}")
+            st.error(f"Chart rendering failed: {e}")
 
         with st.expander("📋 원시 데이터 보기"):
             show = df.copy()
@@ -918,10 +918,10 @@ def main():
                                f"{market}_breadth.csv", "text/csv")
 
     # ══════════════════════════════════════════════
-    # TAB 2: MI 탄력지수 (스탠 와인스태인 책 정의)
+    # TAB 2: MI 탄력Index (스탠 와인스태인 책 정의)
     # ══════════════════════════════════════════════
     elif active_tab == "⚡ 모멘텀":
-        st.subheader("⚡ MI 탄력지수 (Momentum Index)")
+        st.subheader("⚡ MI 탄력Index (Momentum Index)")
         st.caption(
             "스탠 와인스태인 책 정의: 등락종목수 차이(AD)의 200일 롤링 평균. "
             "0선 위 = 시장 강세, 0선 아래 = 시장 약세."
@@ -943,7 +943,7 @@ def main():
         last_mi    = mi_full.iloc[-1]
         prev_mi    = mi_full.iloc[-2] if len(mi_full) >= 2 else last_mi
         if pd.isna(last_mi):
-            mi_verdict = "⚪ 데이터 부족"
+            mi_verdict = "⚪ Not enough data"
             mi_color   = "#757575"
         elif last_mi > 0 and last_mi > prev_mi:
             mi_verdict = "🟢 강세 상승"
@@ -972,7 +972,7 @@ def main():
         fig_mi.add_hline(y=0, line_color="gray", line_dash="dot",
                          annotation_text="기준선(0)")
         fig_mi.update_layout(
-            title=f"{market} MI 탄력지수 — AD차이 {mi_window}일 롤링 평균 (스탠 와인스태인)",
+            title=f"{market} MI 탄력Index — AD차이 {mi_window}일 롤링 평균 (스탠 와인스태인)",
             template="plotly_dark", height=420,
             legend=dict(orientation="h", y=1.05),
             yaxis_title="MI 값 (AD 평균)"
@@ -987,7 +987,7 @@ def main():
     # TAB 3: NH-NL
     # ══════════════════════════════════════════════
     elif active_tab == "🏔 NH-NL":
-        st.subheader("🏔 고점-저점 수치 (신고가 - 신저가 종목 수)")
+        st.subheader("🏔 High-저점 수치 (신고가 - 신저가 종목 수)")
         st.caption(
             "스탠 와인스태인 책 정의: 매주 신고가 기록 종목 수 - 신저가 기록 종목 수. "
             "KRX API 일별 전체 종목 스냅샷으로 52주 신고가/신저가를 판별해 주간 집계합니다."
@@ -1019,7 +1019,7 @@ def main():
             lma = nma_all.iloc[-1]; pma = nma_all.iloc[-2] if len(nma_all) >= 2 else lma
             nhnl_ma_vals = nma_all.dropna()
             slope = np.polyfit(np.arange(len(nhnl_ma_vals)), nhnl_ma_vals.values, 1)[0] if len(nhnl_ma_vals) >= 2 else 0.0
-            if pd.isna(lma):            nhnl_verdict, trend_color = "⚪ 데이터 부족",   "#757575"
+            if pd.isna(lma):            nhnl_verdict, trend_color = "⚪ Not enough data",   "#757575"
             elif lma > 0 and lma > pma: nhnl_verdict, trend_color = "🟢 강세 상승",     "#2e7d32"
             elif lma > 0:               nhnl_verdict, trend_color = "🟡 강세 둔화",     "#f9a825"
             elif lma < 0 and lma < pma: nhnl_verdict, trend_color = "🔴 약세 하락",     "#c62828"
@@ -1032,7 +1032,7 @@ def main():
             h4.metric("4주 MA 기울기",  f"{slope:+.1f}/주")
             h5.metric("판정",            nhnl_verdict)
 
-            # 지수도 주간(FRI)으로 맞춰서 NH-NL과 같은 시간축으로 그림
+            # Index도 주간(FRI)으로 맞춰서 NH-NL과 같은 시간축으로 그림
             pf_idx3 = df.copy()
             pf_idx3["dt"] = pd.to_datetime(pf_idx3["date"].astype(str), format="%Y%m%d")
             pf_idx3 = pf_idx3[["dt", "close"]].sort_values("dt").set_index("dt")
@@ -1041,15 +1041,15 @@ def main():
 
             pf3 = pf3.sort_values("dt").reset_index(drop=True)
 
-            # 2패널 — 위: 주간 지수 / 아래: 주간 NH-NL
+            # 2패널 — 위: 주간 Index / 아래: 주간 NH-NL
             fig_hl = _msp2(rows=2, cols=1, shared_xaxes=True,
                            row_heights=[0.5, 0.5], vertical_spacing=0.03)
 
-            # 위 패널: 지수(주간)
+            # 위 패널: Index(주간)
             fig_hl.add_trace(go.Scatter(
                 x=pf_idx3["dt"], y=pf_idx3["close"].astype(float),
                 line=dict(color="rgba(220,220,220,0.95)", width=1.8),
-                name=f"{market} 지수",
+                name=f"{market} Index",
             ), row=1, col=1)
 
             # 아래 패널: NH-NL
@@ -1087,7 +1087,7 @@ def main():
                 margin=dict(l=10, r=60, t=45, b=10),
                 xaxis_rangeslider_visible=False,
                 legend=dict(orientation="h", y=1.01),
-                yaxis =dict(title="지수"),
+                yaxis =dict(title="Index"),
                 yaxis2=dict(title="NH-NL", zeroline=True,
                             zerolinecolor="rgba(150,150,150,0.4)"),
             )

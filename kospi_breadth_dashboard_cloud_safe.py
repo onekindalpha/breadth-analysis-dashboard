@@ -30,7 +30,7 @@ from urllib3.util.retry import Retry
 # ──────────────────────────────────────────────────────────────
 # 앱 기본 설정
 # ──────────────────────────────────────────────────────────────
-st.set_page_config(page_title="국장 브레드스 대시보드", page_icon="📊", layout="wide")
+st.set_page_config(page_title="KOSPI Breadth Analysis Dashboard", page_icon="📊", layout="wide")
 
 API_BASE = "https://data-dbg.krx.co.kr/svc/apis/sto"
 KRX_ENDPOINTS = {"KOSPI": "/stk_bydd_trd", "KOSDAQ": "/ksq_bydd_trd"}
@@ -38,13 +38,13 @@ FDR_SYMBOLS = {"KOSPI": "KS11", "KOSDAQ": "KQ11"}
 CACHE_DIR = Path("./breadth_cache")
 
 STATUS_MAP = {
-    "BULLISH_CONFIRMATION": ("✅ 상승 확인", "가격·A/D선 모두 고점 근접 (동행)", "#2e7d32"),
-    "BULLISH_DIVERGENCE": ("🔴 심각한 A/D 미확인", "가격 고점인데 A/D선이 크게 뒤처짐", "#c62828"),
-    "BULLISH_DIVERGENCE_CANDIDATE": ("🟠 A/D 초기 경고", "가격이 A/D선보다 빠르게 회복 중", "#ef6c00"),
-    "RECOVERY_IN_PROGRESS": ("🟡 회복 진행 중", "가격 고점 재공략 중, 브레드스 미확인", "#f9a825"),
-    "DOWNSIDE_DIVERGENCE_CANDIDATE": ("🟢 하락 다이버전스", "가격 저점 근접, A/D선은 저점 미확인", "#00838f"),
-    "NORMAL_WEAKNESS": ("⚫ 전반적 약세", "가격·A/D선 모두 저점 근접", "#455a64"),
-    "NEUTRAL": ("⬜ 중립", "뚜렷한 신호 없음", "#757575"),
+    "BULLISH_CONFIRMATION": ("✅ Bullish Confirmation", "가격·A/D선 모두 High 근접 (동행)", "#2e7d32"),
+    "BULLISH_DIVERGENCE": ("🔴⚠️ Severe A/D Divergence", "가격 High인데 A/D선이 크게 뒤처짐", "#c62828"),
+    "BULLISH_DIVERGENCE_CANDIDATE": ("🟠⚠️ Early A/D Warning", "Price is recovering faster than the A/D line", "#ef6c00"),
+    "RECOVERY_IN_PROGRESS": ("🟡Recovery in Progress", "가격 High 재공략 중, 브레드스 미확인", "#f9a825"),
+    "DOWNSIDE_DIVERGENCE_CANDIDATE": ("🟢Downside Divergence", "Price is near lows while A/D line does not confirm lows", "#00838f"),
+    "NORMAL_WEAKNESS": ("⚫ Broad Weakness", "Price and A/D line are both near recent lows", "#455a64"),
+    "NEUTRAL": ("⬜ Neutral", "No clear signal", "#757575"),
 }
 
 
@@ -183,7 +183,7 @@ def build_breadth(
     ad_line = base_value
     session = make_session()
 
-    prog = st.progress(0, text="KRX 브레드스 수집 중…")
+    prog = st.progress(0, text="Collecting KRX breadth data...")
     status = st.empty()
     skip_count = 0
     skip_samples: list[str] = []
@@ -211,28 +211,28 @@ def build_breadth(
                 skip_samples.append(f"{bas_dd}: {e}")
 
         if i == 1 or i == len(dates) or i % 10 == 0:
-            prog.progress(i / len(dates), text=f"수집 중… {bas_dd} ({i}/{len(dates)})")
-            status.caption(f"진행상태: {i}/{len(dates)}")
+            prog.progress(i / len(dates), text=f"Collecting... {bas_dd} ({i}/{len(dates)})")
+            status.caption(f"Progress: {i}/{len(dates)}")
 
     prog.empty()
     status.empty()
 
     if not rows:
-        detail = " / ".join(skip_samples) if skip_samples else "응답 없음"
-        raise RuntimeError(f"수집된 데이터 없음. {detail}")
+        detail = " / ".join(skip_samples) if skip_samples else "No response"
+        raise RuntimeError(f"No data collected. {detail}")
 
     out = pd.DataFrame(rows)
     br = (out["advances"] / (out["advances"] + out["declines"]).replace(0, pd.NA)).astype(float)
     out["breadth_thrust_ema10"] = br.ewm(span=10, adjust=False).mean()
 
     if skip_count:
-        st.info(f"거래일 아님/응답 오류로 {skip_count}건 건너뜀" + (f" · 예시: {' | '.join(skip_samples)}" if skip_samples else ""))
+        st.info(f"Skipped due to non-trading day or response error: {skip_count}records skipped" + (f" · examples: {' | '.join(skip_samples)}" if skip_samples else ""))
 
     return out
 
 
 # ──────────────────────────────────────────────────────────────
-# 지수 OHLC
+# Index OHLC
 # ──────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_index_ohlc(market: str, start: str, end: str) -> pd.DataFrame:
@@ -332,7 +332,7 @@ def compute_signals(
     ad_off_low = (last_ad - ad_low) / abs(ad_low) * 100 if ad_low else float("nan")
 
     peak_date = str(df["date"].iloc[-(days_ago + 1)])
-    peak_label = "오늘" if days_ago == 0 else f"{days_ago}일전 ({peak_date})"
+    peak_label = "Today" if days_ago == 0 else f"{days_ago} days ago ({peak_date})"
     status_key = classify(price_off, ad_off, gap, price_off_low, ad_off_low, price_thr, ad_thr, gap_warn, gap_danger)
     verdict, note, color = STATUS_MAP[status_key]
     return {
@@ -360,7 +360,7 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
     pf = df[mask].copy().reset_index(drop=True)
     pf["dt"] = pd.to_datetime(pf["date"].astype(str), format="%Y%m%d")
 
-    days_ago = int(sig["peak_label"].split("일전")[0]) if "일전" in sig["peak_label"] else 0
+    days_ago = int(sig["peak_label"].split(" days ago")[0]) if " days ago" in sig["peak_label"] else 0
     peak_dt = pd.to_datetime(str(df["date"].iloc[-(days_ago + 1)]), format="%Y%m%d")
 
     fig, (ax1, ax2) = plt.subplots(
@@ -382,8 +382,8 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
 
     # 가벼운 선 차트로 대체
     ax1.plot(pf["dt"], pf["close"].astype(float), color="#26a69a", linewidth=1.8)
-    ax1.set_title(f"{market} 지수", color="#e0e0e0", fontsize=13)
-    ax1.set_ylabel("지수", color="#aaaaaa")
+    ax1.set_title(f"{market} Index", color="#e0e0e0", fontsize=13)
+    ax1.set_ylabel("Index", color="#aaaaaa")
     ax1.axvline(peak_dt, color="orange", linestyle=":", linewidth=1.2, alpha=0.6)
     ax1.axhline(
         y=sig["price_high"],
@@ -391,7 +391,7 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
         linestyle="--",
         linewidth=1.2,
         alpha=0.8,
-        label=f"고점 {sig['price_high']:,.2f}",
+        label=f"High {sig['price_high']:,.2f}",
     )
     ax1.legend(loc="upper left", fontsize=9, facecolor="#1a1a2e", labelcolor="#e0e0e0", framealpha=0.8)
 
@@ -404,7 +404,7 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
         linestyle="--",
         linewidth=1.2,
         alpha=0.8,
-        label=f"고점일 A/D {sig['ad_at_peak']:,.0f}",
+        label=f"High일 A/D {sig['ad_at_peak']:,.0f}",
     )
     ax2.legend(loc="upper left", fontsize=9, facecolor="#1a1a2e", labelcolor="#e0e0e0", framealpha=0.8)
 
@@ -417,9 +417,9 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
     box_txt = (
         f"{sig['verdict']}\n{sig['note']}\n"
         f"─────────────────\n"
-        f"기준고점: {sig['peak_label']}\n"
-        f"가격 고점 대비: {sig['price_off']:.2f}%\n"
-        f"A/D 고점 대비: {sig['ad_off']:.2f}%\n"
+        f"Reference High: {sig['peak_label']}\n"
+        f"Price vs High: {sig['price_off']:.2f}%\n"
+        f"A/D vs High: {sig['ad_off']:.2f}%\n"
         f"괴리: {sig['gap']:.2f}%"
     )
     ax1.text(
@@ -447,31 +447,31 @@ def make_chart_img(df: pd.DataFrame, market: str, sig: dict, chart_months: int) 
 # ──────────────────────────────────────────────────────────────
 def main() -> None:
     st.title("📊 국장 A/D Line 브레드스 대시보드")
-    st.caption("KRX 상승·하락 종목 수 기반 / 스탠 와인스태인 브레드스 분석")
+    st.caption("A/D Line · Breadth Thrust · Price-Breadth Divergence")
 
     # 초기 부팅 확인
     auth_key_default = get_auth_key()
     with st.sidebar:
-        st.header("⚙️ 설정")
+        st.header("⚙️ Settings")
         auth_key = st.text_input("KRX AUTH_KEY", value=auth_key_default, type="password")
-        market = st.selectbox("마켓", ["KOSPI", "KOSDAQ"])
+        market = st.selectbox("Market", ["KOSPI", "KOSDAQ"])
         c1, c2 = st.columns(2)
         today = datetime.today()
-        start_dt = c1.date_input("시작일", value=today - timedelta(days=730))
-        end_dt = c2.date_input("종료일", value=today)
+        start_dt = c1.date_input("Start Date", value=today - timedelta(days=730))
+        end_dt = c2.date_input("End Date", value=today)
 
         fetch_btn = st.button("🔄 데이터 불러오기", type="primary", use_container_width=True)
 
         st.divider()
-        st.subheader("분석 파라미터")
+        st.subheader("Analysis Parameters")
         lookback = st.slider("Lookback (일)", 20, 252, 126)
-        chart_months = st.slider("차트 표시 기간 (월)", 1, 24, 6)
-        base_value = st.number_input("A/D Line 시작값", value=50000.0, step=1000.0)
-        with st.expander("임계값 세부 설정"):
-            price_thr = st.number_input("가격 고점 근접 기준 %", value=2.0, step=0.1)
-            ad_thr = st.number_input("A/D 고점 근접 기준 %", value=3.0, step=0.1)
-            gap_warn = st.number_input("경고 괴리 기준 %", value=1.5, step=0.1)
-            gap_danger = st.number_input("위험 괴리 기준 %", value=2.5, step=0.1)
+        chart_months = st.slider("Chart Display Period (months)", 1, 24, 6)
+        base_value = st.number_input("A/D Line Base Value", value=50000.0, step=1000.0)
+        with st.expander("Threshold Settings"):
+            price_thr = st.number_input("Price Near-High Threshold (%)", value=2.0, step=0.1)
+            ad_thr = st.number_input("A/D Near-High Threshold (%)", value=3.0, step=0.1)
+            gap_warn = st.number_input("Warning Divergence Threshold (%)", value=1.5, step=0.1)
+            gap_danger = st.number_input("Severe Divergence Threshold (%)", value=2.5, step=0.1)
 
         st.subheader("💾 저장된 캐시")
         caches = list_caches()
@@ -483,16 +483,16 @@ def main() -> None:
                     p.unlink()
                     st.rerun()
         else:
-            st.caption("저장된 캐시 없음")
+            st.caption("No cached files")
 
     if not fetch_btn and "df_merged" not in st.session_state:
-        st.info("👈 사이드바에서 설정 후 **데이터 불러오기** 버튼을 눌러주세요.")
+        st.info("👈 Set parameters in the sidebar and click **Load Data**.")
         st.code("streamlit run kospi_breadth_dashboard_cloud_safe.py", language="bash")
         return
 
     if fetch_btn:
         if not auth_key:
-            st.error("KRX AUTH_KEY를 입력해주세요.")
+            st.error("Please enter your KRX AUTH_KEY.")
             return
 
         start_str = start_dt.strftime("%Y%m%d")
@@ -500,13 +500,13 @@ def main() -> None:
 
         cached = load_cache(market, start_str, end_str, base_value)
         if cached is not None:
-            st.success(f"✅ 캐시에서 로드했습니다 ({market} {start_str}~{end_str})")
+            st.success(f"✅ Loaded from cache ({market} {start_str}~{end_str})")
             df = cached
         else:
             try:
-                with st.spinner("지수 OHLC 수집 중…"):
+                with st.spinner("Index OHLC Collecting..."):
                     index_df = fetch_index_ohlc(market, start_str, end_str)
-                with st.spinner("브레드스 수집 중…"):
+                with st.spinner("브레드스 Collecting..."):
                     breadth_df = build_breadth(auth_key, start_str, end_str, market, base_value)
 
                 df = (
@@ -515,16 +515,16 @@ def main() -> None:
                     .reset_index(drop=True)
                 )
                 save_cache(df, market, start_str, end_str, base_value)
-                st.success(f"✅ 수집 완료 — {len(df)}일치 데이터 저장됨")
+                st.success(f"✅ Collection completed — {len(df)}rows saved")
             except Exception as e:
-                st.error(f"데이터 수집 실패: {e}")
+                st.error(f"Data collection failed: {e}")
                 return
 
         st.session_state["df_merged"] = df
 
     df = st.session_state["df_merged"]
     if len(df) < lookback:
-        st.warning(f"데이터 부족: {len(df)}행 (lookback={lookback})")
+        st.warning(f"Not enough data: {len(df)}행 (lookback={lookback})")
         return
 
     sig = compute_signals(df, lookback, price_thr, ad_thr, gap_warn, gap_danger)
@@ -535,25 +535,25 @@ def main() -> None:
 
     st.markdown(
         f'<div style="text-align:center;padding:6px 0 2px 0">'
-        f'<span style="font-size:0.85em;color:#aaaaaa">괴리 (A/D − 가격)</span><br>'
+        f'<span style="font-size:0.85em;color:#aaaaaa">Divergence (A/D − Price)</span><br>'
         f'<span style="font-size:2.6em;font-weight:900;color:{gap_color}">{gap_arrow} {sig["gap"]:+.2f}%</span>'
-        f'<span style="font-size:0.8em;color:#aaaaaa;margin-left:8px">기준: {sig["peak_label"]}</span>'
+        f'<span style="font-size:0.8em;color:#aaaaaa;margin-left:8px">Reference: {sig["peak_label"]}</span>'
         f"</div>",
         unsafe_allow_html=True,
     )
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("최근 날짜", pd.to_datetime(str(last["date"]), format="%Y%m%d").strftime("%Y-%m-%d"))
-    c2.metric(f"{market} 종가", f"{float(last['close']):,.2f}")
-    c3.metric("오늘 AD 차이", f"{int(last['ad_diff']):+,}")
-    c4.metric("가격 고점 대비", f"{sig['price_off']:.2f}%")
-    c5.metric("A/D 고점 대비", f"{sig['ad_off']:.2f}%")
+    c1.metric("Latest Date", pd.to_datetime(str(last["date"]), format="%Y%m%d").strftime("%Y-%m-%d"))
+    c2.metric(f"{market} Close", f"{float(last['close']):,.2f}")
+    c3.metric("Daily A/D Diff", f"{int(last['ad_diff']):+,}")
+    c4.metric("Price vs High", f"{sig['price_off']:.2f}%")
+    c5.metric("A/D vs High", f"{sig['ad_off']:.2f}%")
 
     st.markdown(
         f'<div style="background:{sig["color"]};padding:12px 18px;border-radius:8px;margin:8px 0">'
         f'<b style="font-size:1.2em;color:white">{sig["verdict"]}</b>'
         f'&nbsp;&nbsp;<span style="color:#ffffffcc">{sig["note"]}</span>'
-        f'&nbsp;&nbsp;<span style="color:#ffffffaa;font-size:0.9em">기준: {sig["peak_label"]}</span>'
+        f'&nbsp;&nbsp;<span style="color:#ffffffaa;font-size:0.9em">Reference: {sig["peak_label"]}</span>'
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -562,7 +562,7 @@ def main() -> None:
         img = make_chart_img(df, market, sig, chart_months)
         st.image(img, use_container_width=True)
     except Exception as e:
-        st.error(f"차트 렌더링 실패: {e}")
+        st.error(f"Chart rendering failed: {e}")
 
     with st.expander("📋 원시 데이터 보기"):
         show = df.copy()

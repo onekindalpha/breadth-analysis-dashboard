@@ -79,8 +79,8 @@ def get_ndx100_tickers() -> list[str]:
 
 MARKET_CFG = {
     "NYSE": {
-        "get_tickers": get_sp500_tickers,   # S&P500 = NYSE 대표 지수
-        "idx_sym":     "^GSPC",             # S&P500 지수
+        "get_tickers": get_sp500_tickers,   # S&P500 = NYSE 대표 Index
+        "idx_sym":     "^GSPC",             # S&P500 Index
         "cmp_sym":     "SPY",               # 비교용 ETF
         "label":       "NYSE (S&P500 기준, 500종목)",
         "yf_pd_sym":   "SPY",
@@ -97,20 +97,20 @@ MARKET_CFG = {
 }
 
 STATUS_MAP = {
-    "BULLISH_CONFIRMATION":          ("✅ 상승 확인",       "가격·A/D선 모두 고점 동행",      "#2e7d32"),
-    "BULLISH_DIVERGENCE":            ("🔴 부정적 불일치",    "가격 고점 / A/D선 크게 뒤처짐",  "#c62828"),
+    "BULLISH_CONFIRMATION":          ("✅ Bullish Confirmation",       "가격·A/D선 모두 High 동행",      "#2e7d32"),
+    "BULLISH_DIVERGENCE":            ("🔴 부정적 불일치",    "가격 High / A/D선 크게 뒤처짐",  "#c62828"),
     "BULLISH_DIVERGENCE_CANDIDATE":  ("🟠 초기 경고",        "가격이 A/D선보다 빠르게 회복",   "#ef6c00"),
-    "RECOVERY_IN_PROGRESS":          ("🟡 회복 진행 중",      "고점 재공략 중, A/D 미확인",     "#f9a825"),
+    "RECOVERY_IN_PROGRESS":          ("🟡Recovery in Progress",      "High 재공략 중, A/D 미확인",     "#f9a825"),
     "DOWNSIDE_DIVERGENCE_CANDIDATE": ("🟢 긍정적 불일치",     "가격 저점 / A/D선은 더 올라옴",  "#00838f"),
-    "NORMAL_WEAKNESS":               ("⚫ 전반적 약세",        "가격·A/D선 모두 저점",           "#455a64"),
-    "NEUTRAL":                       ("⬜ 중립",              "뚜렷한 신호 없음",                "#757575"),
+    "NORMAL_WEAKNESS":               ("⚫ Broad Weakness",        "가격·A/D선 모두 저점",           "#455a64"),
+    "NEUTRAL":                       ("⬜ Neutral",              "No clear signal",                "#757575"),
 }
 
 # ──────────────────────────────────────────────────────────────
 # 데이터 수집
 # ──────────────────────────────────────────────────────────────
 def _yf_download(syms: list[str], start: str, end: str) -> pd.DataFrame:
-    """yf.download()로 여러 심볼 종가 일괄 수집. YYYYMMDD → DataFrame(날짜×심볼)"""
+    """yf.download()로 여러 심볼 Close 일괄 수집. YYYYMMDD → DataFrame(날짜×심볼)"""
     s = pd.to_datetime(start, format="%Y%m%d").strftime("%Y-%m-%d")
     e = (pd.to_datetime(end,   format="%Y%m%d") + timedelta(days=1)).strftime("%Y-%m-%d")
     raw = yf.download(syms, start=s, end=e, auto_adjust=True, progress=False, threads=True)
@@ -128,7 +128,7 @@ def _yf_download(syms: list[str], start: str, end: str) -> pd.DataFrame:
     return close.sort_index()
 
 def _yf_ticker_history(sym: str, start: str, end: str) -> pd.Series:
-    """단일 심볼 종가 Series"""
+    """단일 심볼 Close Series"""
     s = pd.to_datetime(start, format="%Y%m%d").strftime("%Y-%m-%d")
     e = (pd.to_datetime(end,   format="%Y%m%d") + timedelta(days=1)).strftime("%Y-%m-%d")
     raw = yf.Ticker(sym).history(start=s, end=e, auto_adjust=True)
@@ -193,7 +193,7 @@ def fetch_breadth(market: str, start: str, end: str, base: float = 50000.0) -> p
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_index(market: str, start: str, end: str) -> pd.DataFrame:
-    """지수 OHLC — ^DJI / ^IXIC (yfinance에서 확실히 작동)"""
+    """Index OHLC — ^DJI / ^IXIC (yfinance에서 확실히 작동)"""
     if not YF_OK:
         raise RuntimeError("yfinance 미설치")
     cfg = MARKET_CFG[market]
@@ -272,7 +272,7 @@ def fetch_nhnl(market: str, start: str, end: str) -> pd.DataFrame | None:
 
 @st.cache_data(show_spinner=False, ttl=86400)
 def fetch_pd(market: str, months: int):
-    """P/D = 지수 종가 ÷ 연간 실제 배당금 (rolling 365일 합산)"""
+    """P/D = Index Close ÷ 연간 실제 배당금 (rolling 365일 합산)"""
     if not YF_OK:
         return None, "yfinance 미설치"
     try:
@@ -404,7 +404,7 @@ def compute_signals(df, lookback, pt, at, gw, gd):
                 price_high=ph, ad_at_peak=ap)
 
 # ──────────────────────────────────────────────────────────────
-# 차트 — 2패널 (위: 지수캔들 단독 / 아래: A/D Line 단독)
+# 차트 — 2패널 (위: Index캔들 단독 / 아래: A/D Line 단독)
 # ──────────────────────────────────────────────────────────────
 def make_plotly_chart(df, market, sig, chart_months, hlab) -> go.Figure:
     end_dt   = pd.to_datetime(df["date"].astype(str), format="%Y%m%d").max()
@@ -525,7 +525,7 @@ def make_plotly_chart(df, market, sig, chart_months, hlab) -> go.Figure:
             domain=[0, 1],
         ),
         yaxis=dict(
-            title="지수", domain=[0.52, 1.0],
+            title="Index", domain=[0.52, 1.0],
             showspikes=True, spikethickness=1, spikecolor="rgba(200,200,200,0.4)",
         ),
         yaxis2=dict(
@@ -544,23 +544,23 @@ def main():
     st.caption("NYSE / NASDAQ — 스탠 와인스태인 브레드스 분석")
 
     with st.sidebar:
-        st.header("⚙️ 설정")
+        st.header("⚙️ Settings")
         market   = st.selectbox("마켓", ["NYSE", "NASDAQ"])
         today    = datetime.today()
         start_dt = st.date_input("시작일", value=today - timedelta(days=730))
         end_dt   = st.date_input("종료일", value=today)
         fetch_btn = st.button("🔄 데이터 불러오기", type="primary", use_container_width=True)
         st.divider()
-        st.subheader("분석 파라미터")
+        st.subheader("Analysis Parameters")
         lookback     = st.slider("Lookback (일)",      20, 252, 126)
-        chart_months = st.slider("차트 표시 기간 (월)", 1,  24,   6)
-        high_bars    = st.slider("고점 탐색 H_b (일)",  10, 500, 60)
+        chart_months = st.slider("Chart Display Period (months)", 1,  24,   6)
+        high_bars    = st.slider("High 탐색 H_b (일)",  10, 500, 60)
         low_bars     = st.slider("저점 탐색 L_b (일)",  10, 500, 130)
-        with st.expander("임계값 세부 설정"):
-            price_thr  = st.number_input("가격 고점 근접 기준 %", value=2.0, step=0.1)
-            ad_thr     = st.number_input("A/D 고점 근접 기준 %",  value=3.0, step=0.1)
-            gap_warn   = st.number_input("경고 괴리 기준 %",       value=1.5, step=0.1)
-            gap_danger = st.number_input("위험 괴리 기준 %",       value=2.5, step=0.1)
+        with st.expander("Threshold Settings"):
+            price_thr  = st.number_input("Price Near-High Threshold (%)", value=2.0, step=0.1)
+            ad_thr     = st.number_input("A/D Near-High Threshold (%)",  value=3.0, step=0.1)
+            gap_warn   = st.number_input("Warning Divergence Threshold (%)",       value=1.5, step=0.1)
+            gap_danger = st.number_input("Severe Divergence Threshold (%)",       value=2.5, step=0.1)
 
     if not fetch_btn and "us_df_merged" not in st.session_state:
         st.info("👈 사이드바에서 마켓 선택 후 **데이터 불러오기** 버튼을 눌러주세요.")
@@ -572,9 +572,9 @@ def main():
         start_str = start_dt.strftime("%Y%m%d")
         end_str   = end_dt.strftime("%Y%m%d")
         try:
-            with st.spinner("구성종목 수집 중… (30~60초 소요)"):
+            with st.spinner("구성종목 Collecting... (30~60초 소요)"):
                 breadth_df = fetch_breadth(market, start_str, end_str)
-            with st.spinner("지수 OHLC 수집 중…"):
+            with st.spinner("Index OHLC Collecting..."):
                 index_df = fetch_index(market, start_str, end_str)
             df = breadth_df.merge(
                 index_df[["date", "open", "high", "low", "close"]], on="date", how="inner"
@@ -586,7 +586,7 @@ def main():
                 nhnl_df = fetch_nhnl(market, start_str, end_str)
             st.session_state["us_nhnl"] = nhnl_df
         except Exception as e:
-            st.error(f"데이터 수집 실패: {e}"); return
+            st.error(f"Data collection failed: {e}"); return
 
     if st.session_state.get("us_df_market") != market:
         st.session_state.pop("us_df_merged", None)
@@ -595,28 +595,28 @@ def main():
     df      = st.session_state["us_df_merged"]
     nhnl_df = st.session_state.get("us_nhnl")
     if len(df) < lookback:
-        st.warning(f"데이터 부족: {len(df)}행"); return
+        st.warning(f"Not enough data: {len(df)}행"); return
 
     sig  = compute_signals(df, lookback, price_thr, ad_thr, gap_warn, gap_danger)
     hlab = compute_hlab(df, high_bars=high_bars, low_bars=low_bars)
     last = df.iloc[-1]
-    tab1, tab2, tab3 = st.tabs(["📈 A/D Line", "⚡ MI 탄력지수", "🏔 NH-NL"])
+    tab1, tab2, tab3 = st.tabs(["📈 A/D Line", "⚡ MI 탄력Index", "🏔 NH-NL"])
 
     with tab1:
         gc = "#00897b" if sig["gap"] >= 0 else "#c62828"
         ga = "▲" if sig["gap"] >= 0 else "▼"
         st.markdown(
             f'<div style="text-align:center;padding:6px 0 2px 0">'
-            f'<span style="font-size:0.85em;color:#aaa">괴리 (A/D − 가격)</span><br>'
+            f'<span style="font-size:0.85em;color:#aaa">Divergence (A/D − Price)</span><br>'
             f'<span style="font-size:2.6em;font-weight:900;color:{gc}">{ga} {sig["gap"]:+.2f}%</span>'
-            f'<span style="font-size:0.8em;color:#aaa;margin-left:8px">기준: {sig["peak_label"]}</span></div>',
+            f'<span style="font-size:0.8em;color:#aaa;margin-left:8px">Reference: {sig["peak_label"]}</span></div>',
             unsafe_allow_html=True)
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("최근 날짜", pd.to_datetime(str(last["date"]), format="%Y%m%d").strftime("%Y-%m-%d"))
-        c2.metric(f"{market} 종가", f"{float(last['close']):,.2f}")
-        c3.metric("오늘 AD 차이",   f"{float(last['ad_diff']):+,.0f}")
-        c4.metric("가격 고점 대비", f"{sig['price_off']:.2f}%")
-        c5.metric("A/D 고점 대비",  f"{sig['ad_off']:.2f}%")
+        c1.metric("Latest Date", pd.to_datetime(str(last["date"]), format="%Y%m%d").strftime("%Y-%m-%d"))
+        c2.metric(f"{market} Close", f"{float(last['close']):,.2f}")
+        c3.metric("Daily A/D Diff",   f"{float(last['ad_diff']):+,.0f}")
+        c4.metric("Price vs High", f"{sig['price_off']:.2f}%")
+        c5.metric("A/D vs High",  f"{sig['ad_off']:.2f}%")
         st.markdown(
             f'<div style="background:{sig["color"]};padding:12px 18px;border-radius:8px;margin:8px 0">'
             f'<b style="font-size:1.2em;color:white">{sig["verdict"]}</b>'
@@ -632,7 +632,7 @@ def main():
             st.dataframe(show[["date", "ad_diff", "ad_line", "close"]].sort_values("date", ascending=False).reset_index(drop=True), use_container_width=True)
 
     with tab2:
-        st.subheader("⚡ MI 탄력지수 (Momentum Index)")
+        st.subheader("⚡ MI 탄력Index (Momentum Index)")
         st.caption("스탠 와인스태인: 등락종목수 차이(AD)의 200일 롤링 평균. 0선 위=강세.")
         mi_w  = st.slider("MA 기간", 50, 300, 200, step=10, key="us_mi")
         end2  = pd.to_datetime(df["date"].astype(str), format="%Y%m%d").max()
@@ -642,7 +642,7 @@ def main():
         mif   = ads.rolling(mi_w).mean()
         mip   = mif.iloc[mask2.values].reset_index(drop=True)
         lm    = mif.iloc[-1]; pm = mif.iloc[-2] if len(mif) >= 2 else lm
-        if pd.isna(lm):              mv, mc = "⚪ 데이터 부족", "#757575"
+        if pd.isna(lm):              mv, mc = "⚪ Not enough data", "#757575"
         elif lm > 0 and lm > pm:    mv, mc = "🟢 강세 상승", "#2e7d32"
         elif lm > 0:                 mv, mc = "🟡 강세 둔화", "#f9a825"
         elif lm < 0 and lm < pm:    mv, mc = "🔴 약세 하락", "#c62828"
@@ -656,7 +656,7 @@ def main():
             marker_color=[("#26a69a" if v >= 0 else "#ef5350") for v in mip.fillna(0)],
             name=f"MI ({mi_w}일)", opacity=0.85))
         fig_mi.add_hline(y=0, line_color="gray", line_dash="dot", annotation_text="기준선(0)")
-        fig_mi.update_layout(title=f"{market} MI 탄력지수", template="plotly_dark", height=420, yaxis_title="MI",
+        fig_mi.update_layout(title=f"{market} MI 탄력Index", template="plotly_dark", height=420, yaxis_title="MI",
             hovermode="x",
             hoverlabel=dict(bgcolor="#1a1a2e", font_color="#ffffff", font_size=12, bordercolor="#888888", namelength=-1))
         st.plotly_chart(fig_mi, use_container_width=True)
@@ -668,7 +668,7 @@ def main():
             err = st.session_state.pop("nhnl_error", None)
             if err:
                 st.warning(
-                    f"NH-NL 데이터 수집 실패: {err}\n\n"
+                    f"NH-NL Data collection failed: {err}\n\n"
                     "Yahoo Finance가 해당 심볼을 지원하지 않을 수 있습니다. "
                     "**데이터 불러오기** 버튼을 다시 눌러보세요."
                 )
@@ -693,7 +693,7 @@ def main():
             ln  = int(ns_all.iloc[-1])
             lh  = int(nhnl_df["new_highs"].iloc[-1])
             ll  = int(nhnl_df["new_lows"].iloc[-1])
-            if pd.isna(lma):        nv, nc = "⚪ 데이터 부족",   "#757575"
+            if pd.isna(lma):        nv, nc = "⚪ Not enough data",   "#757575"
             elif lma > 0 and lma > pma: nv, nc = "🟢 강세 상승", "#2e7d32"
             elif lma > 0:           nv, nc = "🟡 강세 둔화",     "#f9a825"
             elif lma < 0 and lma < pma: nv, nc = "🔴 약세 하락", "#c62828"
@@ -705,20 +705,20 @@ def main():
             n3.metric("NH-NL", f"{ln:+}")
             n4.metric("판정", nv)
 
-            # 지수 같은 기간
+            # Index 같은 기간
             idx_mask = pd.to_datetime(df["date"].astype(str), format="%Y%m%d") >= end3 - pd.DateOffset(months=chart_months)
             pf_idx = df[idx_mask].copy()
             pf_idx["dt"] = pd.to_datetime(pf_idx["date"].astype(str), format="%Y%m%d")
 
-            # 2패널 — 위: 지수 곡선 / 아래: NH-NL 곡선 + MA
+            # 2패널 — 위: Index 곡선 / 아래: NH-NL 곡선 + MA
             fig_n = _msp(rows=2, cols=1, shared_xaxes=True,
                          row_heights=[0.5, 0.5], vertical_spacing=0.02)
 
-            # 위 패널: 지수 곡선 단독
+            # 위 패널: Index 곡선 단독
             fig_n.add_trace(go.Scatter(
                 x=pf_idx["dt"], y=pf_idx["close"],
                 line=dict(color="rgba(200,200,200,0.9)", width=1.8),
-                name=f"{market} 지수",
+                name=f"{market} Index",
             ), row=1, col=1)
 
             # 아래 패널: NH-NL 곡선
@@ -748,7 +748,7 @@ def main():
                 margin=dict(l=10, r=60, t=45, b=10),
                 xaxis_rangeslider_visible=False,
                 legend=dict(orientation="h", y=1.01),
-                yaxis =dict(title="지수"),
+                yaxis =dict(title="Index"),
                 yaxis2=dict(title="NH-NL", zeroline=True,
                             zerolinecolor="rgba(150,150,150,0.4)"),
             )
